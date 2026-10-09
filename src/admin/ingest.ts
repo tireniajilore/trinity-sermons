@@ -230,14 +230,20 @@ const fetchJob = {
   failed: 0,
   lastError: null as string | null,
   recentFailures: [] as string[],
+  consecutiveRateLimit: 0,
   startedAt: null as string | null,
   finishedAt: null as string | null,
 };
 
 function noteFailure(id: string, reason: string): void {
   fetchJob.failed += 1;
-  fetchJob.recentFailures.push(`${id}: ${reason.slice(0, 160)}`);
+  fetchJob.recentFailures.push(`${id}: ${reason.slice(0, 500)}`);
   if (fetchJob.recentFailures.length > 5) fetchJob.recentFailures.shift();
+  if (/429|too many requests|sign in to confirm/i.test(reason)) {
+    fetchJob.consecutiveRateLimit = (fetchJob.consecutiveRateLimit || 0) + 1;
+  } else {
+    fetchJob.consecutiveRateLimit = 0;
+  }
 }
 
 export function getFetchStatus() {
@@ -405,32 +411,25 @@ async function fetchLoop(pool: Pool, ids: string[]): Promise<void> {
   } catch {
     // proceed with the full list
   }
-  let consecutive429 = 0;
   try {
     for (const id of remaining) {
       try {
         const res = await fetchOneVideo(pool, workdir, id);
         if (res === "ok") {
           fetchJob.fetched += 1;
-          consecutive429 = 0;
+          fetchJob.consecutiveRateLimit = 0;
         } else if (res === "no-captions") {
           fetchJob.noCaptions += 1;
-          consecutive429 = 0;
+          fetchJob.consecutiveRateLimit = 0;
         }
         // "failed" already recorded via noteFailure inside fetchOneVideo.
       } catch (err) {
         noteFailure(id, String((err as Error)?.message ?? err));
       }
-      const recent = fetchJob.recentFailures.slice(-3).join(" ");
-      if (/429/.test(recent)) {
-        consecutive429 += 1;
-      } else {
-        consecutive429 = 0;
-      }
-      if (consecutive429 >= 2) {
-        console.log(`fetch-youtube: backing off 15m after repeated 429s`);
-        await new Promise((r) => setTimeout(r, 15 * 60_000));
-        consecutive429 = 0;
+      if ((fetchJob.consecutiveRateLimit || 0) >= 2) {
+        console.log(`fetch-youtube: backing off 20m after repeated rate limits`);
+        await new Promise((r) => setTimeout(r, 20 * 60_000));
+        fetchJob.consecutiveRateLimit = 0;
       } else {
         // Gentle pacing against YouTube rate limits.
         await new Promise((r) => setTimeout(r, 10_000));
@@ -450,6 +449,7 @@ export function startFetch(pool: Pool, ids: string[]): boolean {
   fetchJob.failed = 0;
   fetchJob.lastError = null;
   fetchJob.recentFailures = [];
+  fetchJob.consecutiveRateLimit = 0;
   fetchJob.startedAt = new Date().toISOString();
   fetchJob.finishedAt = null;
   void fetchLoop(pool, ids)
