@@ -11,10 +11,19 @@ import { createMcpServer } from "./mcp/server.js";
 import { defaultPipelineDeps } from "./retrieval/pipeline.js";
 import { createDbPool } from "./providers/postgres.js";
 import { migrate } from "./db/migrate.js";
+import {
+  authorized,
+  getStatus,
+  ingestToken,
+  startBackfill,
+  upsertBatch,
+  type IngestVideo,
+} from "./admin/ingest.js";
 
 const PORT = Number(process.env.PORT ?? 3000);
 const RPM = Number(process.env.RATE_LIMIT_RPM ?? 60);
 const MAX_BODY_BYTES = 1_000_000;
+const MAX_ADMIN_BODY_BYTES = 25_000_000;
 
 // Shared pipeline deps for the process lifetime: one DB pool, one cache.
 // The MCP *server* is still created fresh per request inside the factory.
@@ -59,13 +68,13 @@ function clientIp(req: IncomingMessage): string {
   );
 }
 
-function readBodyBuffer(req: IncomingMessage): Promise<Buffer> {
+function readBodyBuffer(req: IncomingMessage, maxBytes: number): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     let size = 0;
     req.on("data", (c: Buffer) => {
       size += c.length;
-      if (size > MAX_BODY_BYTES) {
+      if (size > maxBytes) {
         reject(new Error("body too large"));
         req.destroy();
         return;
@@ -87,7 +96,7 @@ async function handleMcp(req: IncomingMessage, res: ServerResponse): Promise<voi
       headers.set(k, Array.isArray(v) ? v.join(", ") : v);
     }
     const hasBody = req.method !== "GET" && req.method !== "HEAD";
-    const buf = hasBody ? await readBodyBuffer(req) : null;
+    const buf = hasBody ? await readBodyBuffer(req, MAX_BODY_BYTES) : null;
     const bodyInit = ((): ArrayBuffer | undefined => {
       if (!buf || buf.length === 0) return undefined;
       const ab = new ArrayBuffer(buf.length);
@@ -133,7 +142,70 @@ const LANDING_HTML = `<!doctype html>
 function cors(res: ServerResponse): void {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Mcp-Session-Id");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Mcp-Session-Id, Authorization");
+}
+
+function notFound(res: ServerResponse): void {
+  res.writeHead(404, { "Content-Type": "application/json" });
+  res.end(JSON.stringify({ error: "not found" }));
+}
+
+async function handleAdminIngest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  // Unadvertised unless the token is configured; wrong token also 404s.
+  if (!authorized(req.headers.authorization)) {
+    notFound(res);
+    return;
+  }
+  if (!bootPool) {
+    res.writeHead(503, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "database not configured" }));
+    return;
+  }
+  let body: unknown;
+  try {
+    const buf = await readBodyBuffer(req, MAX_ADMIN_BODY_BYTES);
+    body = JSON.parse(buf.toString("utf8"));
+  } catch {
+    res.writeHead(400, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "invalid JSON body" }));
+    return;
+  }
+  const videos = (body as { videos?: unknown })?.videos;
+  if (!Array.isArray(videos) || videos.length === 0 || videos.length > 100) {
+    res.writeHead(400, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "body.videos must be a non-empty array (max 100)" }));
+    return;
+  }
+  try {
+    const { videosUpserted, transcriptsUpserted } = await upsertBatch(
+      bootPool,
+      videos as IngestVideo[]
+    );
+    const backfillStarted = startBackfill(bootPool);
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(
+      JSON.stringify({ accepted: true, videosUpserted, transcriptsUpserted, backfillStarted })
+    );
+  } catch (err) {
+    console.error("admin ingest failed:", err);
+    res.writeHead(500, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "ingest failed" }));
+  }
+}
+
+async function handleAdminIngestStatus(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  if (!authorized(req.headers.authorization)) {
+    notFound(res);
+    return;
+  }
+  if (!bootPool) {
+    res.writeHead(503, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "database not configured" }));
+    return;
+  }
+  const status = await getStatus(bootPool);
+  res.writeHead(200, { "Content-Type": "application/json" });
+  res.end(JSON.stringify(status));
 }
 
 const httpServer = createServer((req, res) => {
@@ -163,8 +235,15 @@ const httpServer = createServer((req, res) => {
     void handleMcp(req, res);
     return;
   }
-  res.writeHead(404, { "Content-Type": "application/json" });
-  res.end(JSON.stringify({ error: "not found" }));
+  if (url.pathname === "/admin/ingest" && req.method === "POST") {
+    void handleAdminIngest(req, res);
+    return;
+  }
+  if (url.pathname === "/admin/ingest-status" && req.method === "GET") {
+    void handleAdminIngestStatus(req, res);
+    return;
+  }
+  notFound(res);
 });
 
 httpServer.listen(PORT, () => {

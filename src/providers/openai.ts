@@ -6,6 +6,7 @@
 // so no new signup. Embeddings from different model versions are never
 // mixed: PROFILE/EMBEDDING_MODEL are stamped on every profile row.
 
+import { createHash } from "node:crypto";
 import type { QueryEmbedder } from "./postgres.js";
 import type { SermonProfile } from "../sermons/types.js";
 
@@ -14,6 +15,15 @@ export const OPENAI_EMBEDDING_DIMS = 1536;
 export const OPENAI_PROFILE_MODEL = "gpt-4o-mini";
 export const PROFILE_SCHEMA_VERSION = 2;
 export const PROFILE_PROMPT_VERSION = "openai-v1";
+
+/** Stable fingerprint of (transcript content, pipeline versions): skip regeneration when unchanged. */
+export function profileInputHash(contentHash: string): string {
+  return createHash("sha256")
+    .update(
+      [contentHash, PROFILE_SCHEMA_VERSION, PROFILE_PROMPT_VERSION, OPENAI_PROFILE_MODEL, OPENAI_EMBEDDING_MODEL].join("\n")
+    )
+    .digest("hex");
+}
 
 function apiKey(): string {
   const key = process.env.OPENAI_API_KEY;

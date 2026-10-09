@@ -16,24 +16,16 @@
 // Usage: npm run build-profiles [-- --limit 25]
 
 import { Pool } from "pg";
-import { createHash } from "node:crypto";
 import {
   generateProfile,
   renderRetrievalText,
   OpenAIEmbedder,
+  profileInputHash,
   OPENAI_EMBEDDING_MODEL,
   OPENAI_PROFILE_MODEL,
   PROFILE_SCHEMA_VERSION,
   PROFILE_PROMPT_VERSION,
 } from "../src/providers/openai.js";
-
-function inputHash(contentHash: string): string {
-  return createHash("sha256")
-    .update(
-      [contentHash, PROFILE_SCHEMA_VERSION, PROFILE_PROMPT_VERSION, OPENAI_PROFILE_MODEL, OPENAI_EMBEDDING_MODEL].join("\n")
-    )
-    .digest("hex");
-}
 
 async function main(): Promise<void> {
   if (!process.env.DATABASE_URL || !process.env.OPENAI_API_KEY) {
@@ -60,7 +52,7 @@ async function main(): Promise<void> {
   for (const row of rows as Array<{
     id: string; title: string; plain_text: string; content_hash: string; input_hash: string | null;
   }>) {
-    const want = inputHash(row.content_hash);
+    const want = profileInputHash(row.content_hash);
     if (row.input_hash === want) {
       console.log(`skip (unchanged): ${row.id}`);
       continue;
