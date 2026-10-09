@@ -165,7 +165,7 @@ def main():
     for i, vid in enumerate(todo, 1):
         tracks, err = track_urls(vid)
         if tracks is None:
-            print(f"[{i}/{len(todo)}] {vid} META-FAIL", flush=True)
+            print(f"[{i}/{len(todo)}] {vid} META-FAIL {err[:120]}", flush=True)
             if "429" in err or "bot" in err.lower():
                 print("STOPPING (rate limited)", flush=True)
                 sys.exit(42)
