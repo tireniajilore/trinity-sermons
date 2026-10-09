@@ -33,6 +33,9 @@ export const listRecentTool = {
         blurb: s.profile.shortBlurb,
         primaryTopics: s.profile.primaryTopics,
         youtubeUrl: youtubeUrl(s.youtubeVideoId),
+        thesis: s.profile.thesis,
+        preacher: s.preacher,
+        durationSeconds: s.durationSeconds,
       })),
     });
     const lines = structuredContent.sermons.map(

@@ -7,7 +7,8 @@ import { fileURLToPath } from "node:url";
 
 export interface RetrievalConfig {
   pipelineVersion: string;
-  relevanceThreshold: number;
+  overlapFloor: number;
+  matchModeDefault: "strict" | "broad";
   fusion: { k: number; denseWeight: number; lexicalWeight: number };
   candidateCounts: { dense: number; lexical: number; fused: number };
   corpusGeneration: number;
@@ -23,9 +24,9 @@ export function loadRetrievalConfig(): RetrievalConfig {
   const raw = JSON.parse(readFileSync(path, "utf8")) as RetrievalConfig;
   if (
     typeof raw.pipelineVersion !== "string" ||
-    typeof raw.relevanceThreshold !== "number" ||
-    raw.relevanceThreshold < 0 ||
-    raw.relevanceThreshold > 1
+    typeof raw.overlapFloor !== "number" ||
+    raw.overlapFloor < 0 ||
+    raw.overlapFloor > 1
   ) {
     throw new Error("config/retrieval.json is invalid");
   }

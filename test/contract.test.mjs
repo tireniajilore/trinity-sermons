@@ -94,9 +94,26 @@ test("search_sermons: marriage query returns the marriage sermon first", async (
   assert.equal(s.results[0].sermonId, "s-marriage-001");
   assert.equal(s.interpretedIntent.requiredSubject, "marriage");
   assert.ok(s.interpretedIntent.supportiveNeeds.includes("anxiety"));
-  assert.ok(!s.results.some((r) => r.sermonId === "s-money-001"), "passing-mention money sermon must not qualify");
+  assert.ok(!s.results.some((r) => r.sermonId === "s-money-001"), "passing-mention money sermon must not qualify in strict mode");
+  assert.ok(s.appliedFilters.some((f) => f.includes("strict")), "appliedFilters names the strict filter");
+  assert.ok(s.suggestedQueries.length > 0, "suggestedQueries always returned");
+  const top = s.results[0];
+  assert.ok(top.thesis.length > 20, "thesis present for agent judging");
+  assert.equal(top.preacher, "Pastor Taylor Wilkerson");
+  assert.equal(top.durationSeconds, 2280);
   for (const r of s.results) assert.match(r.youtubeUrl, YT_RE, "no timestamp params");
-  assert.ok(result.content[0].text.includes(s.results[0].title), "text fallback agrees with structured output");
+  assert.ok(result.content[0].text.includes(top.title), "text fallback agrees with structured output");
+});
+
+test("search_sermons: broad mode keeps adjacent sermons", async () => {
+  const result = await callTool("search_sermons", {
+    query: "anxiety about my marriage",
+    matchMode: "broad",
+  });
+  const s = result.structuredContent;
+  assert.ok(s.resultCount >= 1);
+  assert.equal(s.results[0].sermonId, "s-marriage-001", "primary-topic match still ranks first");
+  assert.ok(s.appliedFilters.some((f) => f.includes("broad")));
 });
 
 test("search_sermons: unknown topic returns honest empty result", async () => {
@@ -104,19 +121,27 @@ test("search_sermons: unknown topic returns honest empty result", async () => {
   const s = result.structuredContent;
   assert.equal(s.resultCount, 0);
   assert.deepEqual(s.results, []);
-  assert.ok(s.suggestedQueries.length <= 3);
+  assert.ok(s.appliedFilters.some((f) => f.includes("overlap floor")), "empty explained by overlap floor");
   assert.equal(result.isError, undefined);
+});
+
+test("search_sermons: long verbatim queries accepted (up to 2000 chars)", async () => {
+  const result = await callTool("search_sermons", {
+    query: "my husband and I keep fighting about small things and I am scared we are drifting apart, it has been six months of this",
+  });
+  assert.equal(result.structuredContent.results[0].sermonId, "s-marriage-001");
 });
 
 test("search_sermons: invalid inputs produce tool errors", async () => {
   for (const args of [
     { query: "ab" },
-    { query: "x".repeat(501) },
+    { query: "x".repeat(2001) },
     { query: "marriage", limit: 99 },
+    { query: "marriage", matchMode: "sideways" },
     { query: "marriage", bogus: 1 },
   ]) {
     const result = await callTool("search_sermons", args);
-    assert.equal(result.isError, true, `expected error for ${JSON.stringify(args)}`);
+    assert.equal(result.isError, true, `expected error for ${JSON.stringify(args).slice(0, 60)}`);
   }
 });
 
@@ -126,6 +151,10 @@ test("get_sermon: full profile for a known id", async () => {
   assert.equal(s.title, "When Sorrow Stays: Grieving with Hope");
   assert.match(s.youtubeUrl, YT_RE);
   assert.ok(s.thesis.length > 0 && s.primaryTopics.length > 0 && s.scriptures.length > 0);
+  assert.equal(s.preacher, "Pastor Kristen Wilkerson");
+  assert.equal(s.durationSeconds, 2100);
+  assert.ok(s.keyQuotes.length >= 1, "key quotes give the agent the sermon's voice");
+  assert.ok(result.content[0].text.includes(s.keyQuotes[0].slice(0, 30)), "text fallback carries a quote");
 });
 
 test("get_sermon: unknown id returns SERMON_NOT_FOUND", async () => {

@@ -12,6 +12,8 @@ export interface SermonProfile {
   framework: string[];
   scriptures: string[];
   shortBlurb: string;
+  /** 1-2 verbatim quotes (<=280 chars each): the sermon's texture/voice. */
+  keyQuotes: string[];
 }
 
 export interface SermonRecord {
@@ -19,6 +21,9 @@ export interface SermonRecord {
   youtubeVideoId: string;
   title: string;
   publishedAt: string; // ISO date (YYYY-MM-DD)
+  preacher: string | null;
+  durationSeconds: number | null;
+  series: string | null;
   profile: SermonProfile;
   retrievalText: string; // deterministic labelled rendering of the profile
 }

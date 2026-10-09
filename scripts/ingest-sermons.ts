@@ -19,11 +19,17 @@ interface VideoMeta {
   youtubeVideoId: string;
   title: string;
   publishedAt: string;
+  /** Factual metadata captured at ingestion (may be null when unknown). */
+  preacher: string | null;
+  durationSeconds: number | null;
+  series: string | null;
 }
 
 async function listChannelVideos(since: string): Promise<VideoMeta[]> {
   // TODO: fetch the RSS feed (paginated via yt-dlp --flat-playlist as
-  // fallback for >15 entries), filter publishedAt >= since.
+  // fallback for >15 entries), filter publishedAt >= since. For each video:
+  // duration via `yt-dlp --print duration`, preacher/series parsed from the
+  // title/description ("Pastor Taylor Wilkerson", "... | Foundations").
   void since;
   throw new Error("not implemented: needs DATABASE_URL + channel id");
 }
@@ -50,8 +56,10 @@ async function main(): Promise<void> {
       console.log(`caption_missing: ${v.youtubeVideoId} ${v.title}`);
       continue;
     }
-    // TODO: validate, hash, and upsert into sermon_transcripts; compare
-    // content_hash + model versions to skip unchanged videos.
+    // TODO: upsert video metadata (title, published_at, preacher,
+    // duration_seconds, series) into videos; validate, hash, and upsert
+    // the transcript into sermon_transcripts; compare content_hash +
+    // model versions to skip unchanged videos.
     void v;
   }
 }

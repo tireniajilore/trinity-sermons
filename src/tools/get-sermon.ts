@@ -21,6 +21,10 @@ export const GetSermonOutput = z.object({
     desiredOutcomes: z.array(z.string()),
     framework: z.array(z.string()),
     scriptures: z.array(z.string()),
+    preacher: z.string().nullable(),
+    durationSeconds: z.number().nullable(),
+    series: z.string().nullable(),
+    keyQuotes: z.array(z.string()),
   }),
 });
 
@@ -65,13 +69,20 @@ export const getSermonTool = {
         desiredOutcomes: record.profile.desiredOutcomes,
         framework: record.profile.framework,
         scriptures: record.profile.scriptures,
+        preacher: record.preacher,
+        durationSeconds: record.durationSeconds,
+        series: record.series,
+        keyQuotes: record.profile.keyQuotes,
       },
     });
+    const quote = record.profile.keyQuotes[0]
+      ? `\n"${record.profile.keyQuotes[0]}"`
+      : "";
     return {
       content: [
         {
           type: "text" as const,
-          text: `${record.title} (${record.publishedAt})\n${record.profile.shortBlurb}\n${youtubeUrl(record.youtubeVideoId)}`,
+          text: `${record.title} (${record.publishedAt})${quote}\n${record.profile.shortBlurb}\n${youtubeUrl(record.youtubeVideoId)}`,
         },
       ],
       structuredContent,

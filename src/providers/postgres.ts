@@ -34,6 +34,9 @@ interface ProfileRow {
   youtube_video_id: string;
   title: string;
   published_at: string;
+  preacher: string | null;
+  duration_seconds: number | null;
+  series: string | null;
   profile: SermonProfile;
   retrieval_text: string;
 }
@@ -44,6 +47,9 @@ function toRecord(row: ProfileRow): SermonRecord {
     youtubeVideoId: row.youtube_video_id,
     title: row.title,
     publishedAt: row.published_at,
+    preacher: row.preacher,
+    durationSeconds: row.duration_seconds,
+    series: row.series,
     profile: row.profile,
     retrievalText: row.retrieval_text,
   };
@@ -52,6 +58,7 @@ function toRecord(row: ProfileRow): SermonRecord {
 const PROFILE_SELECT = `
   select v.id, v.youtube_video_id, v.title,
          v.published_at::text as published_at,
+         v.preacher, v.duration_seconds, v.series,
          p.profile, p.retrieval_text
   from videos v
   join sermon_profiles p on p.video_id = v.id

@@ -11,12 +11,17 @@ short blurb and a YouTube link that starts at the beginning.
 
 ## How retrieval works
 
-Whole-sermon profiles (thesis, topics, audience needs, framework, scriptures)
-are generated offline with Gemini 2.5-flash and embedded with
-gemini-embedding-2. At query time: deterministic alias parsing establishes the
-*required* subject from the user's own words, dense top-50 + lexical top-50 go
-through weighted reciprocal-rank fusion, Cohere reranks the top 30, and a
-calibrated gate drops everything uncertain. Empty results beat weak results.
+Designed for agents: the server retrieves broadly and filters transparently,
+the agent judges. Whole-sermon profiles (thesis, topics, audience needs,
+key quotes) are generated offline with OpenAI and embedded with
+`text-embedding-3-small` (1536 dims). At query time: deterministic alias
+parsing establishes the *required* subject from the user's own words, dense
+top-50 + lexical top-50 go through weighted reciprocal-rank fusion, then a
+deterministic whole-sermon filter drops passing mentions (strict mode:
+subject must be a primary topic) and an overlap floor keeps unknown topics
+honestly empty. No reranker — the agent reads blurbs, theses, and quotes and
+decides. `appliedFilters` and always-on `suggestedQueries` give the agent its
+iteration loop (`matchMode: "broad"` retries).
 
 ## Develop
 
@@ -26,23 +31,24 @@ npm test          # build + MCP contract tests (in-memory fixtures, no keys)
 npm run dev       # watch mode on :3000
 ```
 
-Copy the pattern for real providers: `SermonRepository`, `CandidateProvider`,
-and `Reranker` are interfaces — Postgres/Gemini/Cohere adapters slot in once
-`DATABASE_URL`, `GEMINI_API_KEY`, and `COHERE_API_KEY` exist. Until then the
-in-memory fakes serve the fixture corpus.
+`SermonRepository`, `CandidateProvider`, and `QueryEmbedder` are interfaces —
+Postgres/OpenAI adapters slot in when `DATABASE_URL` and `OPENAI_API_KEY`
+exist. Until then the in-memory fakes serve the fixture corpus.
 
 ```bash
 npm run ingest          # YouTube captions -> sermon_transcripts (needs DATABASE_URL)
-npm run build-profiles  # Gemini profiles + embeddings, atomic publish (needs GEMINI_API_KEY)
-npm run evaluate        # eval set metrics + threshold calibration sweep
+npm run build-profiles  # OpenAI profiles + embeddings, atomic publish (needs OPENAI_API_KEY)
+npm run evaluate        # eval set metrics against the release gates
 ```
 
 ## Spec adaptations
 
-The design doc targets Vercel + Next.js + Supabase. This repo ships on Railway
-instead (same shape as nycfoodie): plain Node HTTP replaces the Next.js route
-shell, and `db/migrations` is database-neutral Postgres (pgvector) so it runs
-on Railway Postgres or Supabase unchanged.
+The design doc targets Vercel + Next.js + Supabase + Gemini + Cohere. This
+repo ships on Railway instead (same shape as nycfoodie): plain Node HTTP
+replaces the Next.js route shell, `db/migrations` is database-neutral
+Postgres (pgvector) running on Railway Postgres, OpenAI replaces Gemini
+(single vendor — the key already exists), and the Cohere reranker is replaced
+by a deterministic whole-sermon filter since the agent is the judge.
 
 ## Release gates
 

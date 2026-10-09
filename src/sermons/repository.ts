@@ -33,6 +33,7 @@ function fixture(
   youtubeVideoId: string,
   title: string,
   publishedAt: string,
+  meta: { preacher: string | null; durationSeconds: number | null; series: string | null },
   profile: SermonRecord["profile"]
 ): SermonRecord {
   return {
@@ -40,6 +41,9 @@ function fixture(
     youtubeVideoId,
     title,
     publishedAt,
+    preacher: meta.preacher,
+    durationSeconds: meta.durationSeconds,
+    series: meta.series,
     profile,
     retrievalText: retrievalText(title, profile),
   };
@@ -53,7 +57,8 @@ function fixture(
  */
 export function fixtureSermons(): SermonRecord[] {
   return [
-    fixture("s-marriage-001", "dQw4w9WgXcQ", "Love That Lasts: God's Design for Marriage", "2024-02-11", {
+    fixture("s-marriage-001", "dQw4w9WgXcQ", "Love That Lasts: God's Design for Marriage", "2024-02-11",
+      { preacher: "Pastor Taylor Wilkerson", durationSeconds: 2280, series: "Foundations" }, {
       thesis:
         "Marriage thrives when both spouses practice sacrificial, covenant love modelled on Christ's love for the church.",
       primaryTopics: ["marriage"],
@@ -65,8 +70,12 @@ export function fixtureSermons(): SermonRecord[] {
       scriptures: ["Ephesians 5:25", "1 Corinthians 13:4-7"],
       shortBlurb:
         "A whole-message teaching on marriage as covenant: how sacrificial love and honest repair sustain a marriage through conflict.",
+      keyQuotes: [
+        "A contract says 'I love you if.' A covenant says 'I love you, period.'",
+      ],
     }),
-    fixture("s-grief-001", "9bZkp7q19f0", "When Sorrow Stays: Grieving with Hope", "2024-05-19", {
+    fixture("s-grief-001", "9bZkp7q19f0", "When Sorrow Stays: Grieving with Hope", "2024-05-19",
+      { preacher: "Pastor Kristen Wilkerson", durationSeconds: 2100, series: null }, {
       thesis:
         "Grief is not a lack of faith; God meets the grieving and gives hope that sorrow will not have the final word.",
       primaryTopics: ["grief"],
@@ -78,8 +87,12 @@ export function fixtureSermons(): SermonRecord[] {
       scriptures: ["Psalm 34:18", "1 Thessalonians 4:13"],
       shortBlurb:
         "A complete message for the grieving: why sorrow and faith coexist, and how lament opens the door to hope.",
+      keyQuotes: [
+        "You don't have to choose between grief and faith. Scripture holds both.",
+      ],
     }),
-    fixture("s-money-001", "kJQP7kiw5Fk", "Treasure and Trust: Money Without Fear", "2023-11-05", {
+    fixture("s-money-001", "kJQP7kiw5Fk", "Treasure and Trust: Money Without Fear", "2023-11-05",
+      { preacher: "Pastor Taylor Wilkerson", durationSeconds: 2400, series: "Treasure" }, {
       thesis:
         "Financial anxiety loosens its grip when generosity replaces hoarding and trust in God's provision replaces control.",
       primaryTopics: ["money", "anxiety"],
@@ -91,8 +104,12 @@ export function fixtureSermons(): SermonRecord[] {
       scriptures: ["Matthew 6:19-21", "Philippians 4:19"],
       shortBlurb:
         "A full teaching on money and worry: one passing illustration mentions a married couple's budget, but the message is about financial trust, not marriage.",
+      keyQuotes: [
+        "An open hand cannot stay clenched around fear.",
+      ],
     }),
-    fixture("s-anxiety-work-001", "RgKAFK5djSk", "Peace for the Overwhelmed", "2025-01-26", {
+    fixture("s-anxiety-work-001", "RgKAFK5djSk", "Peace for the Overwhelmed", "2025-01-26",
+      { preacher: "Pastor Kristen Wilkerson", durationSeconds: 1980, series: null }, {
       thesis:
         "Chronic stress at work eases when we practice sabbath rest and entrust outcomes to God instead of carrying them alone.",
       primaryTopics: ["anxiety"],
@@ -104,6 +121,9 @@ export function fixtureSermons(): SermonRecord[] {
       scriptures: ["Matthew 11:28-30", "Exodus 20:8-11"],
       shortBlurb:
         "A whole-message answer to work-driven anxiety: sabbath, prayer, and releasing control of outcomes.",
+      keyQuotes: [
+        "Rest is not a reward for finished work. It is a rhythm for unfinished people.",
+      ],
     }),
   ];
 }

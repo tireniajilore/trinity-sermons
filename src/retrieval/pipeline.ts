@@ -1,11 +1,11 @@
-// Search orchestration in one place: intent -> candidates -> rerank -> gate.
-// Nothing ranking-related lives in the MCP tool, the route handler, or the
-// database client.
+// Search orchestration in one place: intent -> candidates -> deterministic
+// whole-sermon filter -> overlap floor. No model reranker: the agent is the
+// judge, the server retrieves broadly and filters transparently.
 
 import { loadRetrievalConfig, type RetrievalConfig } from "../config.js";
 import { interpretQuery, normalizeQuery, type InterpretedIntent } from "./intent.js";
 import { InMemoryCandidateProvider, type CandidateProvider } from "./candidates.js";
-import { InMemoryReranker, applyRelevanceGate, type Reranker } from "./rerank.js";
+import { applyWholeSermonFilter, type MatchMode } from "./filter.js";
 import { SearchCache } from "./cache.js";
 import { InMemorySermonRepository, type SermonRepository } from "../sermons/repository.js";
 import {
@@ -13,7 +13,9 @@ import {
   NullEmbedder,
   PostgresCandidateProvider,
   PostgresSermonRepository,
+  type QueryEmbedder,
 } from "../providers/postgres.js";
+import { OpenAIEmbedder } from "../providers/openai.js";
 import { youtubeUrl, type SermonRecord } from "../sermons/types.js";
 
 export interface SearchResultItem {
@@ -23,11 +25,15 @@ export interface SearchResultItem {
   blurb: string;
   primaryTopics: string[];
   youtubeUrl: string;
+  thesis: string;
+  preacher: string | null;
+  durationSeconds: number | null;
 }
 
 export interface SearchPayload {
   query: string;
   interpretedIntent: { requiredSubject: string | null; supportiveNeeds: string[] };
+  appliedFilters: string[];
   resultCount: number;
   results: SearchResultItem[];
   suggestedQueries: string[];
@@ -36,24 +42,24 @@ export interface SearchPayload {
 export interface PipelineDeps {
   repository: SermonRepository;
   candidateProvider: CandidateProvider;
-  reranker: Reranker;
   cache: SearchCache<SearchPayload>;
   config: RetrievalConfig;
+}
+
+function queryEmbedder(): QueryEmbedder {
+  return process.env.OPENAI_API_KEY ? new OpenAIEmbedder() : new NullEmbedder();
 }
 
 export function defaultPipelineDeps(): PipelineDeps {
   const config = loadRetrievalConfig();
   const cache = new SearchCache<SearchPayload>();
-  const reranker: Reranker = new InMemoryReranker();
   // Postgres when DATABASE_URL is set (production); in-memory fixtures
   // otherwise (local dev, contract tests, offline evaluation).
   const pool = createDbPool();
   if (pool) {
-    const repository = new PostgresSermonRepository(pool);
     return {
-      repository,
-      candidateProvider: new PostgresCandidateProvider(pool, new NullEmbedder()),
-      reranker,
+      repository: new PostgresSermonRepository(pool),
+      candidateProvider: new PostgresCandidateProvider(pool, queryEmbedder()),
       cache,
       config,
     };
@@ -61,7 +67,6 @@ export function defaultPipelineDeps(): PipelineDeps {
   return {
     repository: new InMemorySermonRepository(),
     candidateProvider: new InMemoryCandidateProvider(),
-    reranker,
     cache,
     config,
   };
@@ -75,20 +80,19 @@ function toResultItem(s: SermonRecord): SearchResultItem {
     blurb: s.profile.shortBlurb,
     primaryTopics: s.profile.primaryTopics,
     youtubeUrl: youtubeUrl(s.youtubeVideoId),
+    thesis: s.profile.thesis,
+    preacher: s.preacher,
+    durationSeconds: s.durationSeconds,
   };
 }
 
-/** Zero-result fallback: up to three simpler queries to try instead. */
-export function suggestedQueriesFor(intent: InterpretedIntent, query: string): string[] {
+/** Simpler queries to try — always returned, fuels the agent's iteration. */
+export function suggestedQueriesFor(intent: InterpretedIntent): string[] {
   const out: string[] = [];
   if (intent.requiredSubject) out.push(intent.requiredSubject);
   for (const need of intent.supportiveNeeds) {
     if (out.length >= 3) break;
     if (!out.includes(need)) out.push(need);
-  }
-  if (out.length === 0) {
-    const words = query.split(" ").filter(Boolean);
-    if (words.length > 1) out.push(words.slice(0, Math.min(3, words.length)).join(" "));
   }
   return out.slice(0, 3);
 }
@@ -96,12 +100,14 @@ export function suggestedQueriesFor(intent: InterpretedIntent, query: string): s
 export async function runSearch(
   deps: PipelineDeps,
   rawQuery: string,
-  limit: number
+  limit: number,
+  matchMode: MatchMode = "strict"
 ): Promise<SearchPayload> {
   const query = normalizeQuery(rawQuery);
   const cacheKey = deps.cache.key({
     query: query.toLowerCase(),
     limit,
+    matchMode,
     pipelineVersion: deps.config.pipelineVersion,
     corpusGeneration: deps.config.corpusGeneration,
   });
@@ -116,8 +122,13 @@ export async function runSearch(
     deps.config.candidateCounts,
     deps.config.fusion
   );
-  const reranked = await deps.reranker.rerank(query, intent, candidates);
-  const gated = applyRelevanceGate(reranked, deps.config.relevanceThreshold, limit);
+  const { kept, appliedFilters } = applyWholeSermonFilter(
+    candidates,
+    intent,
+    matchMode,
+    deps.config.overlapFloor
+  );
+  const limited = kept.slice(0, limit);
 
   const payload: SearchPayload = {
     query,
@@ -125,9 +136,10 @@ export async function runSearch(
       requiredSubject: intent.requiredSubject,
       supportiveNeeds: intent.supportiveNeeds,
     },
-    resultCount: gated.length,
-    results: gated.map((c) => toResultItem(c.sermon)),
-    suggestedQueries: gated.length === 0 ? suggestedQueriesFor(intent, query) : [],
+    appliedFilters,
+    resultCount: limited.length,
+    results: limited.map((c) => toResultItem(c.sermon)),
+    suggestedQueries: suggestedQueriesFor(intent),
   };
   deps.cache.set(cacheKey, payload);
   return payload;

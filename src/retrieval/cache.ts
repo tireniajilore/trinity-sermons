@@ -16,9 +16,9 @@ export interface CacheEntry<T> {
 export class SearchCache<T> {
   private readonly entries = new Map<string, CacheEntry<T>>();
 
-  key(parts: { query: string; limit: number; pipelineVersion: string; corpusGeneration: number }): string {
+  key(parts: { query: string; limit: number; matchMode: string; pipelineVersion: string; corpusGeneration: number }): string {
     return createHash("sha256")
-      .update(`${parts.query}\n${parts.limit}\n${parts.pipelineVersion}\n${parts.corpusGeneration}`)
+      .update(`${parts.query}\n${parts.limit}\n${parts.matchMode}\n${parts.pipelineVersion}\n${parts.corpusGeneration}`)
       .digest("hex");
   }
 
