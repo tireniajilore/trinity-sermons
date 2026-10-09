@@ -327,9 +327,11 @@ async function fetchOneVideo(
   const durationSeconds = Math.round(Number(durStr) || 0);
   if (durationSeconds < 300) return "no-captions"; // shorts/clips, not sermons
 
-  // Manual subs first, then auto.
+  // Manual subs first, then auto. Distinguish "none available" from
+  // "download failed" via yt-dlp's own messages.
   let vttPath: string | null = null;
   let source: "youtube_manual" | "youtube_auto" | null = null;
+  let sawDownloadError = "";
   for (const [flag, suffix, src] of [
     ["--write-subs", "", "youtube_manual"],
     ["--write-auto-subs", ".auto", "youtube_auto"],
@@ -349,7 +351,6 @@ async function fetchOneVideo(
       join(workdir, `%(id)s${suffix}.%(ext)s`),
       `https://www.youtube.com/watch?v=${videoId}`,
     ]);
-    void r;
     const candidate = join(workdir, `${videoId}${suffix}.en.vtt`);
     try {
       await fs.access(candidate);
@@ -357,8 +358,16 @@ async function fetchOneVideo(
       source = src;
       break;
     } catch {
-      // try next
+      // No file: check whether subs don't exist or the download failed.
+      const out = r.stdout + r.stderr;
+      if (/unable to download|429|timed out/i.test(out)) {
+        sawDownloadError = out.slice(-160);
+      }
     }
+  }
+  if (sawDownloadError && !vttPath) {
+    noteFailure(videoId, `subtitle download error: ${sawDownloadError.slice(0, 120)}`);
+    return "failed";
   }
   if (!vttPath || !source) return "no-captions";
 
