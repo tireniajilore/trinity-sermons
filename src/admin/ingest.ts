@@ -11,6 +11,10 @@
 // configured the routes behave as 404 (no surface advertised).
 
 import { createHash, timingSafeEqual } from "node:crypto";
+import { spawn } from "node:child_process";
+import { promises as fs } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { Pool } from "pg";
 import {
   generateProfile,
@@ -209,4 +213,203 @@ export async function getStatus(pool: Pool): Promise<JobStatus> {
     // leave the last known value
   }
   return { ...job };
+}
+
+// ---------------------------------------------------------------------------
+// Server-side YouTube fetching. Runs yt-dlp inside the Railway network
+// (different egress IP from the sandbox) to fetch metadata + captions per
+// video id, then upserts via upsertBatch. POST /admin/fetch-youtube
+// { videoIds: string[] } kicks it off; progress is visible in the status.
+// ---------------------------------------------------------------------------
+
+const fetchJob = {
+  running: false,
+  total: 0,
+  fetched: 0,
+  noCaptions: 0,
+  failed: 0,
+  lastError: null as string | null,
+  startedAt: null as string | null,
+  finishedAt: null as string | null,
+};
+
+export function getFetchStatus() {
+  return { ...fetchJob };
+}
+
+function tsToSec(t: string): number {
+  const parts = t.trim().split(":").map(Number);
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  return parts[0] || 0;
+}
+
+function parseVtt(text: string): Array<{ start: number; end: number; text: string }> {
+  const segs: Array<{ start: number; end: number; text: string }> = [];
+  const cueRe = /(\d+:)?\d+:\d+\.\d+\s*-->\s*(\d+:)?\d+:\d+\.\d+/;
+  let start = 0;
+  let end = 0;
+  for (const raw of text.split("\n")) {
+    const line = raw.trim();
+    if (!line || line === "WEBVTT") continue;
+    const m = line.match(cueRe);
+    if (m) {
+      const [a, b] = line.split("-->");
+      start = tsToSec(a);
+      end = tsToSec(b);
+      continue;
+    }
+    if (line.startsWith("NOTE") || line.includes("-->")) continue;
+    const clean = line
+      .replace(/<[^>]+>/g, "")
+      .replace(/&nbsp;/g, " ")
+      .trim();
+    if (clean) segs.push({ start, end, text: clean });
+  }
+  const out: typeof segs = [];
+  for (const s of segs) {
+    if (out.length === 0 || out[out.length - 1].text !== s.text) out.push(s);
+  }
+  return out;
+}
+
+const NAME_RE = /^(Pastor |Dr\. )?([A-Z][a-z'.]+)( & | and )?([A-Z][a-z'.]+)?( [A-Z][a-z'.]+)?$/;
+function preacherFromTitle(title: string): string | null {
+  const tail = title.split("|").pop()?.trim() ?? "";
+  if (/^trinity new york/i.test(tail)) return null;
+  return NAME_RE.test(tail) ? tail : null;
+}
+
+function runYtDlp(args: string[]): Promise<{ stdout: string; stderr: string; code: number }> {
+  return new Promise((resolve) => {
+    const p = spawn("yt-dlp", args, { timeout: 180_000 });
+    let stdout = "";
+    let stderr = "";
+    p.stdout.on("data", (d) => (stdout += d));
+    p.stderr.on("data", (d) => (stderr += d));
+    p.on("error", (e) => resolve({ stdout, stderr: stderr + String(e), code: 1 }));
+    p.on("close", (code) => resolve({ stdout, stderr, code: code ?? 1 }));
+  });
+}
+
+async function fetchOneVideo(
+  pool: Pool,
+  workdir: string,
+  videoId: string
+): Promise<"ok" | "no-captions" | "failed"> {
+  const meta = await runYtDlp([
+    "--skip-download",
+    "--extractor-args",
+    "youtube:player_client=android",
+    "--print",
+    "%(upload_date)s|%(duration)s|%(title)s",
+    `https://www.youtube.com/watch?v=${videoId}`,
+  ]);
+  const line = meta.stdout.trim().split("\n").pop() ?? "";
+  const [uploadDate, durStr, ...titleParts] = line.split("|");
+  const title = titleParts.join("|").trim();
+  if (!/^\d{8}$/.test(uploadDate || "") || !title) return "failed";
+  if (uploadDate < "20230101") return "no-captions"; // out of scope, skip quietly
+  const durationSeconds = Math.round(Number(durStr) || 0);
+  if (durationSeconds < 300) return "no-captions"; // shorts/clips, not sermons
+
+  // Manual subs first, then auto.
+  let vttPath: string | null = null;
+  let source: "youtube_manual" | "youtube_auto" | null = null;
+  for (const [flag, suffix, src] of [
+    ["--write-subs", "", "youtube_manual"],
+    ["--write-auto-subs", ".auto", "youtube_auto"],
+  ] as const) {
+    const r = await runYtDlp([
+      "--skip-download",
+      "--extractor-args",
+      "youtube:player_client=android",
+      flag,
+      "--sub-langs",
+      "en.*",
+      "--sub-format",
+      "vtt/best",
+      "--retries",
+      "2",
+      "-o",
+      join(workdir, `%(id)s${suffix}.%(ext)s`),
+      `https://www.youtube.com/watch?v=${videoId}`,
+    ]);
+    void r;
+    const candidate = join(workdir, `${videoId}${suffix}.en.vtt`);
+    try {
+      await fs.access(candidate);
+      vttPath = candidate;
+      source = src;
+      break;
+    } catch {
+      // try next
+    }
+  }
+  if (!vttPath || !source) return "no-captions";
+
+  const vtt = await fs.readFile(vttPath, "utf8");
+  const segments = parseVtt(vtt);
+  const plainText = segments.map((s) => s.text).join(" ");
+  if (plainText.length < 500) return "no-captions";
+  await fs.unlink(vttPath).catch(() => undefined);
+
+  await upsertBatch(pool, [
+    {
+      youtubeVideoId: videoId,
+      title,
+      publishedAt: `${uploadDate.slice(0, 4)}-${uploadDate.slice(4, 6)}-${uploadDate.slice(6, 8)}`,
+      preacher: preacherFromTitle(title),
+      durationSeconds,
+      series: null,
+      source,
+      segments,
+      plainText,
+    },
+  ]);
+  return "ok";
+}
+
+async function fetchLoop(pool: Pool, ids: string[]): Promise<void> {
+  const workdir = await fs.mkdtemp(join(tmpdir(), "subs-"));
+  try {
+    for (const id of ids) {
+      try {
+        const res = await fetchOneVideo(pool, workdir, id);
+        if (res === "ok") fetchJob.fetched += 1;
+        else if (res === "no-captions") fetchJob.noCaptions += 1;
+        else fetchJob.failed += 1;
+      } catch (err) {
+        fetchJob.failed += 1;
+        fetchJob.lastError = `${id}: ${String((err as Error)?.message ?? err).slice(0, 160)}`;
+      }
+      // Gentle pacing against YouTube rate limits.
+      await new Promise((r) => setTimeout(r, 4000));
+    }
+  } finally {
+    await fs.rm(workdir, { recursive: true, force: true });
+  }
+}
+
+export function startFetch(pool: Pool, ids: string[]): boolean {
+  if (fetchJob.running) return false;
+  fetchJob.running = true;
+  fetchJob.total = ids.length;
+  fetchJob.fetched = 0;
+  fetchJob.noCaptions = 0;
+  fetchJob.failed = 0;
+  fetchJob.lastError = null;
+  fetchJob.startedAt = new Date().toISOString();
+  fetchJob.finishedAt = null;
+  void fetchLoop(pool, ids)
+    .catch((err) => {
+      fetchJob.lastError = String((err as Error)?.message ?? err).slice(0, 200);
+    })
+    .finally(() => {
+      fetchJob.running = false;
+      fetchJob.finishedAt = new Date().toISOString();
+      // Chain the profile backfill once fetching is done.
+      startBackfill(pool);
+    });
+  return true;
 }

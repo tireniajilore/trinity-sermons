@@ -13,9 +13,11 @@ import { createDbPool } from "./providers/postgres.js";
 import { migrate } from "./db/migrate.js";
 import {
   authorized,
+  getFetchStatus,
   getStatus,
   ingestToken,
   startBackfill,
+  startFetch,
   upsertBatch,
   type IngestVideo,
 } from "./admin/ingest.js";
@@ -205,7 +207,42 @@ async function handleAdminIngestStatus(req: IncomingMessage, res: ServerResponse
   }
   const status = await getStatus(bootPool);
   res.writeHead(200, { "Content-Type": "application/json" });
-  res.end(JSON.stringify(status));
+  res.end(JSON.stringify({ ...status, fetch: getFetchStatus() }));
+}
+
+async function handleAdminFetchYoutube(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  if (!authorized(req.headers.authorization)) {
+    notFound(res);
+    return;
+  }
+  if (!bootPool) {
+    res.writeHead(503, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "database not configured" }));
+    return;
+  }
+  let body: unknown;
+  try {
+    const buf = await readBodyBuffer(req, MAX_BODY_BYTES);
+    body = JSON.parse(buf.toString("utf8"));
+  } catch {
+    res.writeHead(400, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "invalid JSON body" }));
+    return;
+  }
+  const ids = (body as { videoIds?: unknown })?.videoIds;
+  if (
+    !Array.isArray(ids) ||
+    ids.length === 0 ||
+    ids.length > 500 ||
+    !ids.every((id) => typeof id === "string" && /^[\w-]{11}$/.test(id))
+  ) {
+    res.writeHead(400, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "body.videoIds must be 1-500 YouTube video ids" }));
+    return;
+  }
+  const started = startFetch(bootPool, ids);
+  res.writeHead(started ? 202 : 409, { "Content-Type": "application/json" });
+  res.end(JSON.stringify({ started, count: ids.length }));
 }
 
 const httpServer = createServer((req, res) => {
@@ -237,6 +274,10 @@ const httpServer = createServer((req, res) => {
   }
   if (url.pathname === "/admin/ingest" && req.method === "POST") {
     void handleAdminIngest(req, res);
+    return;
+  }
+  if (url.pathname === "/admin/fetch-youtube" && req.method === "POST") {
+    void handleAdminFetchYoutube(req, res);
     return;
   }
   if (url.pathname === "/admin/ingest-status" && req.method === "GET") {
