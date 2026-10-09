@@ -395,18 +395,46 @@ async function fetchOneVideo(
 
 async function fetchLoop(pool: Pool, ids: string[]): Promise<void> {
   const workdir = await fs.mkdtemp(join(tmpdir(), "subs-"));
+  // Resume: skip videos that already have transcripts.
+  let remaining = ids;
   try {
-    for (const id of ids) {
+    const { rows } = await pool.query(`select video_id from sermon_transcripts`);
+    const have = new Set((rows as Array<{ video_id: string }>).map((r) => r.video_id));
+    remaining = ids.filter((id) => !have.has(id));
+    console.log(`fetch-youtube: ${ids.length} requested, ${remaining.length} remaining`);
+  } catch {
+    // proceed with the full list
+  }
+  let consecutive429 = 0;
+  try {
+    for (const id of remaining) {
       try {
         const res = await fetchOneVideo(pool, workdir, id);
-        if (res === "ok") fetchJob.fetched += 1;
-        else if (res === "no-captions") fetchJob.noCaptions += 1;
+        if (res === "ok") {
+          fetchJob.fetched += 1;
+          consecutive429 = 0;
+        } else if (res === "no-captions") {
+          fetchJob.noCaptions += 1;
+          consecutive429 = 0;
+        }
+        // "failed" already recorded via noteFailure inside fetchOneVideo.
       } catch (err) {
-        fetchJob.failed += 1;
-        fetchJob.lastError = `${id}: ${String((err as Error)?.message ?? err).slice(0, 160)}`;
+        noteFailure(id, String((err as Error)?.message ?? err));
       }
-      // Gentle pacing against YouTube rate limits.
-      await new Promise((r) => setTimeout(r, 4000));
+      const recent = fetchJob.recentFailures.slice(-3).join(" ");
+      if (/429/.test(recent)) {
+        consecutive429 += 1;
+      } else {
+        consecutive429 = 0;
+      }
+      if (consecutive429 >= 2) {
+        console.log(`fetch-youtube: backing off 15m after repeated 429s`);
+        await new Promise((r) => setTimeout(r, 15 * 60_000));
+        consecutive429 = 0;
+      } else {
+        // Gentle pacing against YouTube rate limits.
+        await new Promise((r) => setTimeout(r, 10_000));
+      }
     }
   } finally {
     await fs.rm(workdir, { recursive: true, force: true });
