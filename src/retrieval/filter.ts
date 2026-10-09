@@ -12,6 +12,7 @@
 // (TODO post-backfill).
 
 import type { InterpretedIntent } from "./intent.js";
+import { ALIAS_MAP } from "./intent.js";
 import type { Candidate } from "./candidates.js";
 
 export type MatchMode = "strict" | "broad";
@@ -106,6 +107,20 @@ export function fuzzyOverlap(query: string, doc: string): number {
   return hits / q.length;
 }
 
+/**
+ * Word-level subject match against primary topics. The old exact-string check
+ * almost never fired (330 messy topic strings like "Hope and Encouragement").
+ * Now: keep when the canonical subject or any of its trigger words appears
+ * as a whole word inside any primary topic.
+ */
+function subjectInPrimaryTopics(subject: string, primaryTopics: string[]): boolean {
+  const triggers = [subject, ...(ALIAS_MAP[subject] ?? [])];
+  const topicWords = new Set(
+    primaryTopics.flatMap((t) => normTopic(t).split(/[^a-z0-9']+/))
+  );
+  return triggers.some((w) => topicWords.has(w.toLowerCase()));
+}
+
 export function applyWholeSermonFilter(
   candidates: Candidate[],
   intent: InterpretedIntent,
@@ -119,10 +134,9 @@ export function applyWholeSermonFilter(
   let ordered = candidates;
   if (subject && matchMode === "broad") {
     const rank = (c: Candidate): number => {
-      const primary = c.sermon.profile.primaryTopics.map(normTopic);
+      if (subjectInPrimaryTopics(subject, c.sermon.profile.primaryTopics)) return 0;
       const secondary = c.sermon.profile.secondaryTopics.map(normTopic);
-      if (primary.includes(subject)) return 0;
-      if (secondary.includes(subject)) return 1;
+      if (secondary.some((t) => t.includes(subject))) return 1;
       return 2;
     };
     ordered = [...candidates].sort((a, b) => rank(a) - rank(b) || b.fusedScore - a.fusedScore);
@@ -132,9 +146,11 @@ export function applyWholeSermonFilter(
   let droppedBySubject = 0;
   let droppedByFloor = 0;
   const kept = ordered.filter((c) => {
-    // 1. Explicit subject in primary topics (strict): strongest evidence.
+    // 1. Explicit subject in primary topics (strict): hard gate.
+    //    Word-level match via subjectInPrimaryTopics (not exact string),
+    //    so messy topic strings like "Hope and Encouragement" still match.
     if (subject && matchMode === "strict") {
-      if (c.sermon.profile.primaryTopics.map(normTopic).includes(subject)) return true;
+      if (subjectInPrimaryTopics(subject, c.sermon.profile.primaryTopics)) return true;
       droppedBySubject += 1;
       return false;
     }
