@@ -229,9 +229,16 @@ const fetchJob = {
   noCaptions: 0,
   failed: 0,
   lastError: null as string | null,
+  recentFailures: [] as string[],
   startedAt: null as string | null,
   finishedAt: null as string | null,
 };
+
+function noteFailure(id: string, reason: string): void {
+  fetchJob.failed += 1;
+  fetchJob.recentFailures.push(`${id}: ${reason.slice(0, 160)}`);
+  if (fetchJob.recentFailures.length > 5) fetchJob.recentFailures.shift();
+}
 
 export function getFetchStatus() {
   return { ...fetchJob };
@@ -305,10 +312,17 @@ async function fetchOneVideo(
     "%(upload_date)s|%(duration)s|%(title)s",
     `https://www.youtube.com/watch?v=${videoId}`,
   ]);
+  if (meta.code !== 0) {
+    noteFailure(videoId, `yt-dlp metadata exit ${meta.code}: ${meta.stderr.slice(0, 120)}`);
+    return "failed";
+  }
   const line = meta.stdout.trim().split("\n").pop() ?? "";
   const [uploadDate, durStr, ...titleParts] = line.split("|");
   const title = titleParts.join("|").trim();
-  if (!/^\d{8}$/.test(uploadDate || "") || !title) return "failed";
+  if (!/^\d{8}$/.test(uploadDate || "") || !title) {
+    noteFailure(videoId, `bad metadata line: ${line.slice(0, 120)}`);
+    return "failed";
+  }
   if (uploadDate < "20230101") return "no-captions"; // out of scope, skip quietly
   const durationSeconds = Math.round(Number(durStr) || 0);
   if (durationSeconds < 300) return "no-captions"; // shorts/clips, not sermons
@@ -378,7 +392,6 @@ async function fetchLoop(pool: Pool, ids: string[]): Promise<void> {
         const res = await fetchOneVideo(pool, workdir, id);
         if (res === "ok") fetchJob.fetched += 1;
         else if (res === "no-captions") fetchJob.noCaptions += 1;
-        else fetchJob.failed += 1;
       } catch (err) {
         fetchJob.failed += 1;
         fetchJob.lastError = `${id}: ${String((err as Error)?.message ?? err).slice(0, 160)}`;
@@ -399,6 +412,7 @@ export function startFetch(pool: Pool, ids: string[]): boolean {
   fetchJob.noCaptions = 0;
   fetchJob.failed = 0;
   fetchJob.lastError = null;
+  fetchJob.recentFailures = [];
   fetchJob.startedAt = new Date().toISOString();
   fetchJob.finishedAt = null;
   void fetchLoop(pool, ids)
