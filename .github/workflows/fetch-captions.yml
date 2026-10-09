@@ -1,0 +1,31 @@
+name: Fetch sermon captions
+
+on:
+  workflow_dispatch:
+    inputs:
+      batch:
+        description: "Max videos to fetch"
+        default: "205"
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install yt-dlp
+        run: pip install yt-dlp curl_cffi
+      - name: Fetch captions
+        run: |
+          python3 scripts/caption-backfill.py --batch "${{ inputs.batch }}" --no-post
+        env:
+          PYTHONUNBUFFERED: "1"
+      - name: Upload captions
+        uses: actions/upload-artifact@v4
+        with:
+          name: captions
+          path: .caps/
+          if-no-files-found: warn
