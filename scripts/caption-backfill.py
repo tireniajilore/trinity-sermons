@@ -20,7 +20,7 @@ import time
 import urllib.error
 import urllib.request
 
-REPO = os.path.expanduser("~/workspace/trinity-sermons")
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HIDDEN = os.path.join(REPO, "hidden_files")
 CAPS = os.path.join(REPO, ".caps")
 os.makedirs(CAPS, exist_ok=True)
