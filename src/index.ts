@@ -8,12 +8,28 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { createMcpHandler } from "@modelcontextprotocol/server";
 import { createMcpServer } from "./mcp/server.js";
+import { defaultPipelineDeps } from "./retrieval/pipeline.js";
+import { createDbPool } from "./providers/postgres.js";
+import { migrate } from "./db/migrate.js";
 
 const PORT = Number(process.env.PORT ?? 3000);
 const RPM = Number(process.env.RATE_LIMIT_RPM ?? 60);
 const MAX_BODY_BYTES = 1_000_000;
 
-const mcpHandler = createMcpHandler(() => createMcpServer(), {
+// Shared pipeline deps for the process lifetime: one DB pool, one cache.
+// The MCP *server* is still created fresh per request inside the factory.
+const deps = defaultPipelineDeps();
+const bootPool = createDbPool();
+if (bootPool) {
+  try {
+    await migrate(bootPool);
+    console.log("database migrations ok");
+  } catch (err) {
+    console.error("database migration failed (serving anyway):", err);
+  }
+}
+
+const mcpHandler = createMcpHandler(() => createMcpServer(deps), {
   responseMode: "json",
 });
 

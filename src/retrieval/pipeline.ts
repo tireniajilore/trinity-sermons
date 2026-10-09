@@ -8,6 +8,12 @@ import { InMemoryCandidateProvider, type CandidateProvider } from "./candidates.
 import { InMemoryReranker, applyRelevanceGate, type Reranker } from "./rerank.js";
 import { SearchCache } from "./cache.js";
 import { InMemorySermonRepository, type SermonRepository } from "../sermons/repository.js";
+import {
+  createDbPool,
+  NullEmbedder,
+  PostgresCandidateProvider,
+  PostgresSermonRepository,
+} from "../providers/postgres.js";
 import { youtubeUrl, type SermonRecord } from "../sermons/types.js";
 
 export interface SearchResultItem {
@@ -36,12 +42,28 @@ export interface PipelineDeps {
 }
 
 export function defaultPipelineDeps(): PipelineDeps {
+  const config = loadRetrievalConfig();
+  const cache = new SearchCache<SearchPayload>();
+  const reranker: Reranker = new InMemoryReranker();
+  // Postgres when DATABASE_URL is set (production); in-memory fixtures
+  // otherwise (local dev, contract tests, offline evaluation).
+  const pool = createDbPool();
+  if (pool) {
+    const repository = new PostgresSermonRepository(pool);
+    return {
+      repository,
+      candidateProvider: new PostgresCandidateProvider(pool, new NullEmbedder()),
+      reranker,
+      cache,
+      config,
+    };
+  }
   return {
     repository: new InMemorySermonRepository(),
     candidateProvider: new InMemoryCandidateProvider(),
-    reranker: new InMemoryReranker(),
-    cache: new SearchCache<SearchPayload>(),
-    config: loadRetrievalConfig(),
+    reranker,
+    cache,
+    config,
   };
 }
 

@@ -1,0 +1,141 @@
+// Postgres providers: sermon reads and hybrid candidate retrieval against
+// the hybrid_search_sermon_profiles RPC. Wired when DATABASE_URL is set;
+// otherwise the pipeline uses the in-memory providers (dev/tests).
+//
+// Query embedding is injectable: NullEmbedder until the Gemini adapter
+// lands, at which point the RPC gets real dense vectors. A null embedding
+// takes the lexical-only path (spec: embedding failure -> lexical, then
+// Cohere).
+
+import { Pool } from "pg";
+import type { SermonRepository } from "../sermons/repository.js";
+import type { Candidate, CandidateProvider } from "../retrieval/candidates.js";
+import type { InterpretedIntent } from "../retrieval/intent.js";
+import type { SermonProfile, SermonRecord } from "../sermons/types.js";
+
+export interface QueryEmbedder {
+  embed(text: string): Promise<number[] | null>;
+}
+
+export class NullEmbedder implements QueryEmbedder {
+  async embed(_text: string): Promise<number[] | null> {
+    return null;
+  }
+}
+
+export function createDbPool(): Pool | null {
+  const url = process.env.DATABASE_URL;
+  if (!url) return null;
+  return new Pool({ connectionString: url, max: 5 });
+}
+
+interface ProfileRow {
+  id: string;
+  youtube_video_id: string;
+  title: string;
+  published_at: string;
+  profile: SermonProfile;
+  retrieval_text: string;
+}
+
+function toRecord(row: ProfileRow): SermonRecord {
+  return {
+    sermonId: row.id,
+    youtubeVideoId: row.youtube_video_id,
+    title: row.title,
+    publishedAt: row.published_at,
+    profile: row.profile,
+    retrievalText: row.retrieval_text,
+  };
+}
+
+const PROFILE_SELECT = `
+  select v.id, v.youtube_video_id, v.title,
+         v.published_at::text as published_at,
+         p.profile, p.retrieval_text
+  from videos v
+  join sermon_profiles p on p.video_id = v.id
+  where v.is_searchable and v.suppressed_at is null
+`;
+
+export class PostgresSermonRepository implements SermonRepository {
+  constructor(private readonly pool: Pool) {}
+
+  async getById(sermonId: string): Promise<SermonRecord | null> {
+    const { rows } = await this.pool.query(`${PROFILE_SELECT} and v.id = $1`, [sermonId]);
+    return rows.length === 0 ? null : toRecord(rows[0] as ProfileRow);
+  }
+
+  async listRecent(limit: number): Promise<SermonRecord[]> {
+    const { rows } = await this.pool.query(
+      `${PROFILE_SELECT} order by v.published_at desc limit $1`,
+      [limit]
+    );
+    return (rows as ProfileRow[]).map(toRecord);
+  }
+
+  async listAll(): Promise<SermonRecord[]> {
+    const { rows } = await this.pool.query(`${PROFILE_SELECT} order by v.published_at desc`);
+    return (rows as ProfileRow[]).map(toRecord);
+  }
+}
+
+export class PostgresCandidateProvider implements CandidateProvider {
+  constructor(
+    private readonly pool: Pool,
+    private readonly embedder: QueryEmbedder = new NullEmbedder()
+  ) {}
+
+  async candidates(
+    intent: InterpretedIntent,
+    _sermons: SermonRecord[],
+    counts: { dense: number; lexical: number; fused: number },
+    fusion: { k: number; denseWeight: number; lexicalWeight: number }
+  ): Promise<Candidate[]> {
+    const embedding = await this.embedder.embed(intent.retrievalQuery).catch(() => null);
+    if (embedding) {
+      const { rows } = await this.pool.query(
+        `select video_id, fused_score
+         from hybrid_search_sermon_profiles($1::vector, $2, $3, $4, $5, $6, $7, $8)`,
+        [
+          JSON.stringify(embedding),
+          intent.retrievalQuery,
+          counts.dense,
+          counts.lexical,
+          counts.fused,
+          fusion.k,
+          fusion.denseWeight,
+          fusion.lexicalWeight,
+        ]
+      );
+      return this.toCandidates(rows as Array<{ video_id: string; fused_score: number }>);
+    }
+    // Lexical-only fallback when no query embedding is available.
+    const { rows } = await this.pool.query(
+      `select p.video_id, 0::float8 as fused_score
+       from sermon_profiles p
+       join videos v on v.id = p.video_id
+       where v.is_searchable and v.suppressed_at is null
+         and p.retrieval_fts @@ plainto_tsquery('english', $1)
+       order by ts_rank_cd(p.retrieval_fts, plainto_tsquery('english', $1)) desc
+       limit $2`,
+      [intent.retrievalQuery, counts.fused]
+    );
+    return this.toCandidates(rows as Array<{ video_id: string; fused_score: number }>);
+  }
+
+  private async toCandidates(
+    rows: Array<{ video_id: string; fused_score: number }>
+  ): Promise<Candidate[]> {
+    if (rows.length === 0) return [];
+    const ids = rows.map((r) => r.video_id);
+    const { rows: profileRows } = await this.pool.query(
+      `${PROFILE_SELECT} and v.id = any($1)`,
+      [ids]
+    );
+    const byId = new Map((profileRows as ProfileRow[]).map((r) => [r.id, toRecord(r)]));
+    return rows
+      .map((r) => ({ sermon: byId.get(r.video_id)!, fusedScore: Number(r.fused_score) }))
+      .filter((c) => c.sermon !== undefined);
+  }
+}
