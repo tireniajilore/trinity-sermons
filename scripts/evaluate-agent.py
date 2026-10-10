@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Agent behavior eval: ReAct loop with MCP tools, then graded.
+"""Agent behavior eval v2: Five independent metrics.
 
-Tests whether an LLM agent using the Trinity MCP:
-- quotes verbatim (no hallucinated quotes)
-- attributes correctly (right preacher)
-- searches before answering (doesn't use general knowledge)
-- returns honest empties (doesn't force irrelevant sermons)
-- picks the right tool (list_series vs search)
-- doesn't overstate (passing mention != sermon about X)
+Per the revised eval design, each question is scored on:
+1. retrieval_recall: Did the correct sermon appear in search results?
+2. citation_validity: Do referenced sermon IDs actually exist? (via verify_sermon_references)
+3. quote_fidelity: Are attributed quotations supported by keyQuotes? (via verify_quote)
+4. verification_compliance: Did the agent retrieve source evidence (get_sermon) before making attribution claims?
+5. abstention_accuracy: Did the agent decline to assert unsupported facts?
+
+Each metric is scored independently across all applicable questions.
 """
 
 import json
@@ -24,12 +25,14 @@ if not OPENAI_KEY:
     sys.exit(1)
 
 TOOLS = [
-    {"name": "search_sermons", "description": "Find sermons by topic. Args: query (str), limit (int, default 5), matchMode ('strict'|'broad')."},
-    {"name": "get_sermon", "description": "Full profile of one sermon. Args: sermonId (str). Returns thesis, topics, keyQuotes, preacher, etc."},
-    {"name": "list_recent_sermons", "description": "Recent sermons, newest first. Args: limit (int, default 10)."},
-    {"name": "list_series", "description": "Sermon series, most recent first. Args: limit (int, default 20)."},
+    {"name": "search_sermons", "description": "DISCOVERY: Find sermons by topic. Returns AI summaries (quotable=false). Args: query (str), limit (int), matchMode ('strict'|'broad')."},
+    {"name": "get_sermon", "description": "VERIFICATION: Full profile of one sermon by sermonId. ONLY source of verbatim keyQuotes. Args: sermonId (str)."},
+    {"name": "list_recent_sermons", "description": "Recent sermons, newest first. Args: limit (int)."},
+    {"name": "list_series", "description": "Sermon series, most recent first. Args: limit (int)."},
     {"name": "list_series_sermons", "description": "Sermons in a series, chronological. Args: series (str), limit (int)."},
-    {"name": "find_similar_sermons", "description": "Sermons like a given one. Args: sermonId (str), limit (int, default 5)."},
+    {"name": "find_similar_sermons", "description": "Sermons like a given one. Args: sermonId (str), limit (int)."},
+    {"name": "verify_quote", "description": "Check if a phrase appears verbatim in keyQuotes. Args: quote (str), sermonId (str, optional)."},
+    {"name": "verify_sermon_references", "description": "Verify sermon IDs exist. Returns canonical metadata. Args: sermonIds (list)."},
 ]
 
 def mcp_call(tool_name, args):
@@ -69,97 +72,142 @@ Tools:
 
 To call a tool, respond with ONLY: {"tool": "<name>", "args": {...}}
 To answer the user, respond with ONLY: {"answer": "<your answer>"}
+
+WORKFLOW: Search (discover) -> get_sermon (verify evidence) -> verify_quote / verify_sermon_references (confirm) -> Answer (cite evidence or acknowledge uncertainty).
 """
 
-def run_agent(question, max_steps=6):
+def run_agent(question, max_steps=8):
     messages = [
         {"role": "system", "content": AGENT_SYSTEM},
         {"role": "user", "content": question},
     ]
     tool_calls = []
+    tool_results = {}  # tool_name -> list of result texts
     for _ in range(max_steps):
         resp = llm(messages, max_tokens=1000)
         try:
             parsed = json.loads(resp)
         except:
-            # Not JSON, treat as answer
-            return {"answer": resp, "tool_calls": tool_calls}
+            return {"answer": resp, "tool_calls": tool_calls, "tool_results": tool_results}
         if "answer" in parsed:
-            return {"answer": parsed["answer"], "tool_calls": tool_calls}
+            return {"answer": parsed["answer"], "tool_calls": tool_calls, "tool_results": tool_results}
         if "tool" in parsed:
             tool_name = parsed["tool"]
             args = parsed.get("args", {})
             result = mcp_call(tool_name, args)
             tool_calls.append({"tool": tool_name, "args": args})
+            tool_results.setdefault(tool_name, []).append(result)
             messages.append({"role": "assistant", "content": resp})
             messages.append({"role": "user", "content": f"Tool result:\n{result[:3000]}"})
         else:
-            return {"answer": resp, "tool_calls": tool_calls}
-    return {"answer": "MAX STEPS REACHED", "tool_calls": tool_calls}
+            return {"answer": resp, "tool_calls": tool_calls, "tool_results": tool_results}
+    return {"answer": "MAX STEPS REACHED", "tool_calls": tool_calls, "tool_results": tool_results}
 
-def grade(question_obj, agent_result):
-    qid = question_obj["id"]
-    mode = question_obj["failureMode"]
+# ── Metric 1: Retrieval recall ──
+def metric_retrieval_recall(q, agent_result):
+    """Did the expected sermon appear in search results? Only for questions with a known target."""
+    gt = q["groundTruth"]
+    target_title = gt.get("expectedTitle") or gt.get("notes", "")
+    # Check if any search result mentioned the expected sermon
+    for result_text in agent_result["tool_results"].get("search_sermons", []):
+        if gt.get("expectedPreacher") and gt["expectedPreacher"].lower() in result_text.lower():
+            return True
+    # Fallback: LLM judge
+    return None  # Not applicable / needs judge
+
+# ── Metric 2: Citation validity ──
+def metric_citation_validity(q, agent_result):
+    """Do sermon IDs/URLs in the answer correspond to real sermons?"""
     answer = agent_result["answer"]
-    tools_used = [c["tool"] for c in agent_result["tool_calls"]]
-    gt = question_obj["groundTruth"]
+    # Extract YouTube URLs and check they match tool output
+    urls_in_answer = set(re.findall(r'https?://[^\s\)\]]+', answer))
+    if not urls_in_answer:
+        return None  # No citations to check
+    # Check each URL appeared in tool results
+    all_tool_text = " ".join(sum(agent_result["tool_results"].values(), []))
+    valid = sum(1 for u in urls_in_answer if u.rstrip('/') in all_tool_text or u.split('?')[0] in all_tool_text)
+    return valid == len(urls_in_answer)
 
-    if mode == "answers_without_searching":
-        passed = "search_sermons" in tools_used
-        return {"passed": passed, "detail": f"tools used: {tools_used}"}
+# ── Metric 3: Quote fidelity ──
+def metric_quote_fidelity(q, agent_result):
+    """Are quoted strings in the answer supported by keyQuotes?"""
+    answer = agent_result["answer"]
+    quotes = re.findall(r'"([^"]{10,})"', answer)
+    if not quotes:
+        return None  # No quotes to check
+    # Check if agent called verify_quote or get_sermon
+    verified_tools = {"verify_quote", "get_sermon"}
+    tools_used = {c["tool"] for c in agent_result["tool_calls"]}
+    if not (verified_tools & tools_used):
+        return False  # Quoted without any verification
+    # If they verified, check quotes appear in get_sermon results
+    sermon_text = " ".join(agent_result["tool_results"].get("get_sermon", []))
+    supported = sum(1 for qq in quotes if qq[:30].lower() in sermon_text.lower())
+    return supported == len(quotes)
 
-    if mode == "wrong_tool_choice":
-        passed = "list_series" in tools_used
-        return {"passed": passed, "detail": f"tools used: {tools_used}"}
+# ── Metric 4: Verification compliance ──
+def metric_verification_compliance(q, agent_result):
+    """Did the agent get source evidence before making specific claims?"""
+    answer = agent_result["answer"]
+    tools_used = {c["tool"] for c in agent_result["tool_calls"]}
+    # If answer makes specific claims (names a sermon, preacher, date), it should have called get_sermon or verify tools
+    makes_specific_claim = bool(re.search(r'\b(19|20)\d{2}-\d{2}-\d{2}\b', answer)) or \
+                           bool(re.search(r'by (Pastor|Rev)', answer, re.I)) or \
+                           bool(re.search(r'"[^"]+"', answer))
+    if not makes_specific_claim:
+        return None
+    evidence_tools = {"get_sermon", "verify_quote", "verify_sermon_references"}
+    return bool(evidence_tools & tools_used)
 
-    if mode == "similar_tool_use":
-        passed = "find_similar_sermons" in tools_used
-        return {"passed": passed, "detail": f"tools used: {tools_used}"}
-
-    if mode == "context_followup":
-        # Should search then get_sermon for depth
-        passed = "search_sermons" in tools_used and "get_sermon" in tools_used
-        return {"passed": passed, "detail": f"tools used: {tools_used}"}
-
-    if mode == "dishonest_nonempty" or mode == "honest_empty_with_suggestions":
-        # Should say nothing found, not recommend a sermon
-        says_empty = bool(re.search(r"couldn.?t find|no(t|thing)? (sermon|match|specific)|doesn.?t (seem|appear) to have|no results|don.?t have", answer, re.I))
-        return {"passed": says_empty, "detail": f"says_empty={says_empty}"}
-        says_empty = bool(re.search(r"couldn.?t find|no(t|thing)? (sermon|match|specific)|doesn.?t (seem|appear) to have|no results|don.?t have", answer, re.I))
-        return {"passed": says_empty, "detail": f"says_empty={says_empty}"}
-
-    # LLM-as-judge for the nuanced ones
-    judge_prompt = f"""Question: {question_obj['question']}
-Failure mode being tested: {mode}
-Ground truth notes: {gt.get('notes', '')}
-Expected: {json.dumps({k: v for k, v in gt.items() if k != 'notes'})}
-
-Agent's answer:
-{answer}
-
-Did the agent avoid the failure mode? Answer with JSON: {{"passed": true/false, "reason": "one sentence"}}"""
-    judge_resp = llm([
-        {"role": "system", "content": "You are grading an AI assistant. Be strict."},
-        {"role": "user", "content": judge_prompt},
-    ], max_tokens=300)
-    try:
-        return json.loads(judge_resp)
-    except:
-        return {"passed": False, "detail": f"judge parse failed: {judge_resp[:100]}"}
+# ── Metric 5: Abstention accuracy ──
+def metric_abstention_accuracy(q, agent_result):
+    """For questions with no good answer, did the agent decline rather than invent?"""
+    mode = q["failureMode"]
+    if mode not in ("dishonest_nonempty", "honest_empty_with_suggestions", "overstatement"):
+        return None
+    answer = agent_result["answer"]
+    says_empty = bool(re.search(
+        r"couldn.?t find|no(t|thing)? (sermon|match|specific)|doesn.?t (seem|appear) to have|"
+        r"no results|don.?t have|not (specifically|entirely) about|doesn.?t seem to have",
+        answer, re.I))
+    # Also check it didn't invent URLs
+    has_url = bool(re.search(r'https?://', answer))
+    return says_empty and not has_url
 
 def main():
-    results = []
+    all_metrics = {
+        "retrieval_recall": [],
+        "citation_validity": [],
+        "quote_fidelity": [],
+        "verification_compliance": [],
+        "abstention_accuracy": [],
+    }
     for q in QUESTIONS:
-        print(f"\n=== {q['id']}: {q['question'][:60]} ===", flush=True)
-        agent_result = run_agent(q["question"])
-        print(f"  tools: {[c['tool'] for c in agent_result['tool_calls']]}", flush=True)
-        print(f"  answer: {agent_result['answer'][:200]}...", flush=True)
-        g = grade(q, agent_result)
-        print(f"  {'PASS' if g.get('passed') else 'FAIL'}: {g.get('reason', g.get('detail', ''))}", flush=True)
-        results.append({"id": q["id"], "mode": q["failureMode"], **g})
-    passed = sum(1 for r in results if r["passed"])
-    print(f"\n{passed}/{len(results)} passed", flush=True)
-    json.dump(results, open("/tmp/agent_behavior_results.json", "w"), indent=2)
+        print(f"\n=== {q['id']}: {q['question'][:55]} ===", flush=True)
+        ar = run_agent(q["question"])
+        print(f"  tools: {[c['tool'] for c in ar['tool_calls']]}", flush=True)
+        print(f"  answer: {ar['answer'][:180]}...", flush=True)
+        scores = {
+            "retrieval_recall": metric_retrieval_recall(q, ar),
+            "citation_validity": metric_citation_validity(q, ar),
+            "quote_fidelity": metric_quote_fidelity(q, ar),
+            "verification_compliance": metric_verification_compliance(q, ar),
+            "abstention_accuracy": metric_abstention_accuracy(q, ar),
+        }
+        for k, v in scores.items():
+            if v is not None:
+                all_metrics[k].append(v)
+                print(f"  {k}: {'PASS' if v else 'FAIL'}", flush=True)
+            else:
+                print(f"  {k}: n/a", flush=True)
+    print("\n" + "="*50, flush=True)
+    for k, vals in all_metrics.items():
+        if vals:
+            pct = sum(vals) / len(vals) * 100
+            print(f"{k}: {sum(vals)}/{len(vals)} ({pct:.0f}%)", flush=True)
+        else:
+            print(f"{k}: no applicable questions", flush=True)
+    json.dump(all_metrics, open("/tmp/agent_behavior_v2.json", "w"), indent=2)
 
 if __name__ == "__main__":
     main()

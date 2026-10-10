@@ -31,6 +31,7 @@ export interface SearchResultItem {
   preacher: string | null;
   durationSeconds: number | null;
   citation: string;
+  quotable: false;
 }
 
 export interface SearchPayload {
@@ -95,6 +96,7 @@ function toResultItem(s: SermonRecord): SearchResultItem {
     preacher: s.preacher,
     durationSeconds: s.durationSeconds,
     citation: formatCitation(s.title, s.preacher, s.publishedAt, url),
+    quotable: false as const,
   };
 }
 

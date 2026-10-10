@@ -36,7 +36,7 @@ export const GetSermonOutput = z.object({
 export const getSermonTool = {
   name: "get_sermon",
   description:
-    "Get the full profile of one Trinity sermon by its sermonId (from search_sermons or list_recent_sermons): thesis, topics, audience needs, questions answered, teaching framework, scriptures, and verbatim keyQuotes. GROUNDING: quote only from keyQuotes, verbatim. Attribute the preacher and date exactly as returned. Never paraphrase as quotation.",
+    "VERIFICATION: Get the full profile of one Trinity sermon by its sermonId (from search_sermons or list_recent_sermons). This is the ONLY source of verbatim keyQuotes — search result blurbs and theses are AI summaries, not quotations. GROUNDING: quote only from keyQuotes, verbatim. Attribute the preacher and date exactly as returned. Never paraphrase as quotation.",
   inputSchema: GetSermonInput,
   outputSchema: GetSermonOutput,
   annotations: {

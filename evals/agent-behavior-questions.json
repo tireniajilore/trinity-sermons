@@ -8,13 +8,15 @@
     "question": "What's a powerful quote from Pastor Wilkerson's sermon on marriage as covenant?"
   },
   {
-    "failureMode": "wrong_attribution",
+    "failureMode": "attribution_accuracy",
     "groundTruth": {
-      "expectedPreacher": "Pastor Kristen Wilkerson",
-      "notes": "Check preacher name matches get_sermon output exactly."
+      "sermonId": "TBD",
+      "expectedPreacher": "Kristen Wilkerson",
+      "expectedDate": "2024-04-29",
+      "notes": "Real production sermon. Agent should search, find it, and attribute correctly. Do not invent details."
     },
     "id": "ab02",
-    "question": "Who preached about grief in May 2024, and what was their main point?"
+    "question": "Who preached 'Holy Ground' and when was it preached?"
   },
   {
     "failureMode": "answers_without_searching",

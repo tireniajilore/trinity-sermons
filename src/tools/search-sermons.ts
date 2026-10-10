@@ -33,14 +33,18 @@ export const SermonResultItem = z.object({
   sermonId: z.string(),
   title: z.string(),
   publishedAt: z.string(),
+  /** AI-generated summary — NOT a verbatim quote. Do not attribute these words to the preacher. */
   blurb: z.string(),
   primaryTopics: z.array(z.string()),
   youtubeUrl: z.string(),
+  /** AI-generated summary of the sermon's message — NOT a verbatim quote. */
   thesis: z.string(),
   preacher: z.string().nullable(),
   durationSeconds: z.number().nullable(),
   /** Pre-formatted citation — copy verbatim instead of constructing your own. */
   citation: z.string(),
+  /** Discovery only. Call get_sermon for verbatim keyQuotes before quoting. */
+  quotable: z.literal(false),
 });
 
 export const AnswerPolicy = z.object({
@@ -85,7 +89,7 @@ function textSummary(payload: SearchPayload): string {
 export const searchSermonsTool = {
   name: "search_sermons",
   description:
-    "Find complete Trinity New York sermons about a topic or life situation. Write a rich query — paste the situation verbatim (up to 2000 chars). Returns whole-message matches with blurbs, theses, and YouTube links; check appliedFilters to see how the query was interpreted, and use matchMode 'broad' if 'strict' returns too little. Empty results mean nothing clearly matched. GROUNDING: cite only sermons, titles, preachers, and theses from the returned results. Never invent quotes — use get_sermon for verbatim keyQuotes. Distinguish what the sermons say from your own interpretation. If results are empty, say so plainly.",
+    "DISCOVERY: Find complete Trinity New York sermons about a topic or life situation. Write a rich query — paste the situation verbatim (up to 2000 chars). Returns whole-message matches with AI-generated blurbs and theses (marked quotable=false — do NOT quote these as the preacher's words). For verbatim quotes, call get_sermon for keyQuotes. Check appliedFilters to see how the query was interpreted, and use matchMode 'broad' if 'strict' returns too little. Empty results mean nothing clearly matched. GROUNDING: cite only sermons, titles, preachers, and theses from the returned results. Use the pre-formatted citation field verbatim. Never invent quotes. Distinguish what the sermons say from your own interpretation. If results are empty, say so plainly.",
   inputSchema: SearchSermonsInput,
   outputSchema: SearchSermonsOutput,
   annotations: {
