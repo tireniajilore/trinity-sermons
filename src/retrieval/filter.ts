@@ -110,7 +110,8 @@ export function applyWholeSermonFilter(
   candidates: Candidate[],
   intent: InterpretedIntent,
   matchMode: MatchMode,
-  overlapFloor: number
+  overlapFloor: number,
+  denseMaxDistance: number | null
 ): FilterResult {
   const appliedFilters: string[] = [];
   const subject = intent.requiredSubject ? normTopic(intent.requiredSubject) : null;
@@ -131,14 +132,24 @@ export function applyWholeSermonFilter(
 
   let droppedBySubject = 0;
   let droppedByFloor = 0;
+  let droppedByDense = 0;
   const kept = ordered.filter((c) => {
-    // 1. Explicit subject in primary topics (strict): strongest evidence.
+    // 1. Explicit subject in primary topics (strict): hard gate, unchanged.
     if (subject && matchMode === "strict") {
       if (c.sermon.profile.primaryTopics.map(normTopic).includes(subject)) return true;
       droppedBySubject += 1;
       return false;
     }
-    // 2. Fuzzy lexical overlap floor.
+    // 2. Dense meaning similarity: cosine distance between query and sermon
+    //    embeddings. Catches "drowning in debt" -> "financial stewardship"
+    //    where no words match. Null when lexical-only retrieval.
+    if (
+      denseMaxDistance !== null &&
+      c.denseDistance !== null &&
+      c.denseDistance <= denseMaxDistance
+    )
+      return true;
+    // 3. Fuzzy lexical overlap floor (backstop).
     if (fuzzyOverlap(intent.retrievalQuery, c.sermon.retrievalText) >= overlapFloor) return true;
     droppedByFloor += 1;
     return false;

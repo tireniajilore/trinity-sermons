@@ -1,1 +1,18 @@
-{"candidateCounts":{"dense":50,"fused":30,"lexical":50},"corpusGeneration":1,"fusion":{"denseWeight":0.65,"k":60,"lexicalWeight":0.35},"matchModeDefault":"strict","note":"overlapFloor is the honest-empty tripwire: if the best candidate shares fewer content words than this with the query, the result is empty. Tuned against evals/retrieval-cases.ts.","overlapFloor":0.03,"pipelineVersion":"2.0.0"}
+{
+  "candidateCounts": {
+    "dense": 50,
+    "fused": 30,
+    "lexical": 50
+  },
+  "corpusGeneration": 1,
+  "fusion": {
+    "denseWeight": 0.65,
+    "k": 60,
+    "lexicalWeight": 0.35
+  },
+  "matchModeDefault": "strict",
+  "note": "overlapFloor is the honest-empty tripwire: if the best candidate shares fewer content words than this with the query, the result is empty. Tuned against evals/retrieval-cases.ts. denseMaxDistance is the meaning-similarity tripwire (cosine distance): candidates farther than this from the query embedding are dropped unless the subject or lexical floor keeps them. Start 0.55, calibrate against human labels.",
+  "overlapFloor": 0.03,
+  "pipelineVersion": "2.0.0",
+  "denseMaxDistance": 0.55
+}

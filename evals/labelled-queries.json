@@ -1,0 +1,662 @@
+[
+ {
+  "id": "q01",
+  "query": "sermons about finding hope when life feels hopeless",
+  "expectEmpty": false,
+  "grades": {
+   "-mBn7qvZlNg": 3,
+   "4f0lp3443CE": 3,
+   "KRDiS5a7aVM": 3,
+   "NcXbIxlYZnU": 2,
+   "VXiWCA93m3w": 2,
+   "Y1IaWVOZ-wc": 2,
+   "c7_1h549L00": 3,
+   "gBkK_nCQOkA": 2
+  }
+ },
+ {
+  "id": "q02",
+  "query": "how do I forgive someone who hurt me deeply",
+  "expectEmpty": false,
+  "grades": {
+   "N3RhLVI2t2M": 0,
+   "ZP9gX9lj42Y": 1,
+   "__bzaf__tyY": 1,
+   "aI6pL-svBDo": 0,
+   "xjZeGMgYTqk": 2
+  }
+ },
+ {
+  "id": "q03",
+  "query": "what does the bible say about anxiety and worry",
+  "expectEmpty": false,
+  "grades": {
+   "68Ig8FnLtEQ": 1,
+   "CCg9nKb8NiM": 0,
+   "MMA6LqgJG4A": 3,
+   "PGHZbFnmE44": 3,
+   "So8VUZSFBlw": 0
+  }
+ },
+ {
+  "id": "q04",
+  "query": "sermons for someone grieving a death in the family",
+  "expectEmpty": false,
+  "grades": {
+   "FwqN88DvQ8E": 0,
+   "ftk0wTpJMl8": 0,
+   "lrHYKi1Zk7U": 0,
+   "sUbO2epOhxg": 0
+  }
+ },
+ {
+  "id": "q05",
+  "query": "going through a divorce, need encouragement",
+  "expectEmpty": false,
+  "grades": {
+   "4f0lp3443CE": 3,
+   "FHs-mYcdh0w": 2,
+   "KRDiS5a7aVM": 3,
+   "V_aAJGl4Ydk": 3,
+   "gBkK_nCQOkA": 2,
+   "j45jt3sgq0c": 1,
+   "kbaaTub_4ts": 1,
+   "nccmlUEqsaY": 1
+  }
+ },
+ {
+  "id": "q06",
+  "query": "what does god say about money and generosity",
+  "expectEmpty": false,
+  "grades": {
+   "5f_vPk3EOUo": 3,
+   "68Ig8FnLtEQ": 2,
+   "CCg9nKb8NiM": 3,
+   "UoVKh1gxDvk": 3,
+   "eR66-DntyRo": 3,
+   "gSVfvPAu_v8": 3,
+   "nnG8zmLSTcU": 3,
+   "rhKdW_ZYUyA": 3
+  }
+ },
+ {
+  "id": "q07",
+  "query": "sermons about finding your purpose",
+  "expectEmpty": false,
+  "grades": {
+   "1ENK4hhvaiI": 2,
+   "FwqN88DvQ8E": 2,
+   "QBK35xk10nA": 3,
+   "RLzmx6ha9yk": 3,
+   "V-zLuTJF--Y": 3,
+   "b72AYcUVXyY": 3,
+   "ftk0wTpJMl8": 1,
+   "gQk3hCmfUMU": 3
+  }
+ },
+ {
+  "id": "q08",
+  "query": "how to pray when you don't know what to say",
+  "expectEmpty": false,
+  "grades": {
+   "4XCfarUdC-g": 2,
+   "A8XVeg8xchQ": 3,
+   "Bdc35JE-5a8": 1,
+   "BgL0TXoRdVI": 0,
+   "iRLLHvf6G0c": 0,
+   "iXSfNL01to4": 0,
+   "t2SjuvXd50o": 0,
+   "xEgXP3rOq5E": 0
+  }
+ },
+ {
+  "id": "q09",
+  "query": "struggling with doubt, is my faith real",
+  "expectEmpty": false,
+  "grades": {
+   "23qAv67roo0": 2,
+   "7o9SQ0GANKw": 2,
+   "EP305aULULY": 0,
+   "GENNqGkoels": 2,
+   "KRDiS5a7aVM": 1,
+   "VPgdANvN_h8": 0,
+   "s1A9vLAtpRc": 1
+  }
+ },
+ {
+  "id": "q10",
+  "query": "sermons about being a better parent",
+  "expectEmpty": false,
+  "grades": {
+   "--621IVuN1w": 0,
+   "BPUHvVIkQsU": 2,
+   "E9IIqTRSdF8": 0,
+   "YkrcfkOB2d0": 3,
+   "lrHYKi1Zk7U": 0,
+   "pIf1FW0LcDw": 0,
+   "raAQBv7_svo": 0,
+   "tJK7QAYdV_I": 1
+  }
+ },
+ {
+  "id": "q11",
+  "query": "lost my job, feeling worthless",
+  "expectEmpty": false,
+  "grades": {
+   "--621IVuN1w": 0,
+   "EaZDHQzSAro": 0,
+   "JnpUqK_51GM": 0,
+   "KRDiS5a7aVM": 2,
+   "LmJfZmd-DJs": 3,
+   "k2KpWrz5h3w": 0,
+   "sOFbrVlYdlU": 2,
+   "sy9J9Ouqhjg": 0
+  }
+ },
+ {
+  "id": "q12",
+  "query": "angry at god after a miscarriage",
+  "expectEmpty": false,
+  "grades": {
+   "4f0lp3443CE": 3,
+   "7o9SQ0GANKw": 1,
+   "D-DgqdgLgW8": 0,
+   "LmJfZmd-DJs": 3,
+   "V_aAJGl4Ydk": 2,
+   "oM0rjIupYsY": 3,
+   "sUbO2epOhxg": 2,
+   "uu5I6RRqpzs": 1
+  }
+ },
+ {
+  "id": "q13",
+  "query": "what is grace really",
+  "expectEmpty": false,
+  "grades": {
+   "BN1szb6PSfg": 3,
+   "CUOK3Zymqzs": 1,
+   "M1gUlJFhf2I": 1,
+   "MW67uyheBE0": 1,
+   "k2KpWrz5h3w": 2,
+   "mWhodGfDwLk": 1,
+   "t7yT8prAXKg": 2
+  }
+ },
+ {
+  "id": "q14",
+  "query": "sermons on the ten commandments",
+  "expectEmpty": false,
+  "grades": {
+   "18WKC88N6PY": 0,
+   "E9IIqTRSdF8": 2,
+   "FwqN88DvQ8E": 0,
+   "ftk0wTpJMl8": 0,
+   "lrHYKi1Zk7U": 0,
+   "zAyYMXC30P4": 3,
+   "zs1XzM-sP-0": 3
+  }
+ },
+ {
+  "id": "q15",
+  "query": "how to love difficult people",
+  "expectEmpty": false,
+  "grades": {
+   "Y0vt1958VNI": 3,
+   "ZP9gX9lj42Y": 3,
+   "__bzaf__tyY": 2,
+   "dpNdeilNuZU": 3,
+   "hwU-a2GW-n0": 1,
+   "kGDFQpbVAYA": 2,
+   "nccmlUEqsaY": 0,
+   "tJK7QAYdV_I": 3
+  }
+ },
+ {
+  "id": "q16",
+  "query": "new christian, where do I start",
+  "expectEmpty": false,
+  "grades": {
+   "4ZgjDUb7KiI": 2,
+   "ApqcawUQYe8": 3,
+   "BgL0TXoRdVI": 2,
+   "KJPghxxMpT8": 3,
+   "dxZ5Fr7TPRI": 2,
+   "iRLLHvf6G0c": 1,
+   "jTkBfBU6kMA": 1,
+   "mEDPRxB0XL4": 3
+  }
+ },
+ {
+  "id": "q17",
+  "query": "sermons about loneliness and community",
+  "expectEmpty": false,
+  "grades": {
+   "-mBn7qvZlNg": 2,
+   "EaZDHQzSAro": 3,
+   "FwqN88DvQ8E": 1,
+   "QWWwiWCoQxI": 2,
+   "S4_gjrHTOP0": 1,
+   "S8gt7YWadnI": 3,
+   "rJLDoDRttp8": 0,
+   "sy9J9Ouqhjg": 2
+  }
+ },
+ {
+  "id": "q18",
+  "query": "what does the bible say about rest and sabbath",
+  "expectEmpty": false,
+  "grades": {
+   "68Ig8FnLtEQ": 1,
+   "CCg9nKb8NiM": 0,
+   "PGHZbFnmE44": 2,
+   "nQocNpMdPJw": 3,
+   "nnG8zmLSTcU": 0,
+   "tUYjqSfPlXI": 0,
+   "zAyYMXC30P4": 1,
+   "zipRLL6Gqa8": 3
+  }
+ },
+ {
+  "id": "q19",
+  "query": "dealing with temptation",
+  "expectEmpty": false,
+  "grades": {
+   "7o9SQ0GANKw": 0,
+   "PGHZbFnmE44": 0,
+   "lrHYKi1Zk7U": 1
+  }
+ },
+ {
+  "id": "q20",
+  "query": "sermons for advent and christmas",
+  "expectEmpty": false,
+  "grades": {
+   "-NFehRy7JxA": 1,
+   "2GKa9jXsyQ4": 3,
+   "7ww7y6eHPXM": 3,
+   "9a4lI0jLiXg": 3,
+   "CUOK3Zymqzs": 3,
+   "DQER2gJJCuc": 3,
+   "NcXbIxlYZnU": 3,
+   "bezZTFoN5ZI": 3
+  }
+ },
+ {
+  "id": "q21",
+  "query": "how to hear god's voice",
+  "expectEmpty": false,
+  "grades": {
+   "1K4e2SdlCPw": 3,
+   "1peAMHxY1sY": 1,
+   "7o9SQ0GANKw": 2,
+   "Bdc35JE-5a8": 2,
+   "C9p9bwqf84E": 2,
+   "VPgdANvN_h8": 1,
+   "VUE7rGRFfwM": 2,
+   "oM0rjIupYsY": 3
+  }
+ },
+ {
+  "id": "q22",
+  "query": "marriage is struggling, need hope",
+  "expectEmpty": false,
+  "grades": {
+   "-mBn7qvZlNg": 1,
+   "4f0lp3443CE": 3,
+   "N-5VC53RRc4": 2,
+   "NcXbIxlYZnU": 1,
+   "Nt2zTmVLZ6Y": 3,
+   "hwU-a2GW-n0": 3,
+   "kbaaTub_4ts": 3,
+   "nitLe6N2r-4": 1
+  }
+ },
+ {
+  "id": "q23",
+  "query": "what happens when we die",
+  "expectEmpty": false,
+  "grades": {
+   "LmJfZmd-DJs": 0,
+   "fxKYBHqiMdE": 0
+  }
+ },
+ {
+  "id": "q24",
+  "query": "sermons about identity and self-worth",
+  "expectEmpty": false,
+  "grades": {
+   "ApqcawUQYe8": 3,
+   "FwqN88DvQ8E": 1,
+   "JnpUqK_51GM": 3,
+   "N-5VC53RRc4": 1,
+   "TQtbgLMpw9M": 2,
+   "fkZoYieZjro": 2,
+   "lrHYKi1Zk7U": 2,
+   "s8sk0jgImvo": 2
+  }
+ },
+ {
+  "id": "q25",
+  "query": "how to share my faith without being weird",
+  "expectEmpty": false,
+  "grades": {
+   "3S5e4Vt6BY4": 1,
+   "4W7GfS3ETnY": 0,
+   "68Ig8FnLtEQ": 1,
+   "9OU6FaI2sTA": 3,
+   "ApqcawUQYe8": 1,
+   "VG2ZZFMNUyk": 1,
+   "gBkK_nCQOkA": 1,
+   "pIf1FW0LcDw": 3
+  }
+ },
+ {
+  "id": "q26",
+  "query": "feeling far from god",
+  "expectEmpty": false,
+  "grades": {
+   "--621IVuN1w": 2,
+   "7o9SQ0GANKw": 3,
+   "C9p9bwqf84E": 3,
+   "D-DgqdgLgW8": 3,
+   "EaZDHQzSAro": 1,
+   "VG2ZZFMNUyk": 1,
+   "VUE7rGRFfwM": 2,
+   "k2KpWrz5h3w": 3
+  }
+ },
+ {
+  "id": "q27",
+  "query": "what does the bible say about leadership",
+  "expectEmpty": false,
+  "grades": {
+   "68Ig8FnLtEQ": 1,
+   "CCg9nKb8NiM": 1,
+   "RLzmx6ha9yk": 2,
+   "SQzpl92rnOc": 3,
+   "Se0QFd2jyqo": 3,
+   "fkZoYieZjro": 3
+  }
+ },
+ {
+  "id": "q28",
+  "query": "sermons on the holy spirit",
+  "expectEmpty": false,
+  "grades": {
+   "2EAE7kNxeF8": 3,
+   "4XCfarUdC-g": 3,
+   "CvZwjZnXtr8": 3,
+   "QQU9R6hn6X0": 2,
+   "Uf4WJNIHxNM": 0,
+   "dpNdeilNuZU": 0,
+   "ivtjd8DXpjQ": 2,
+   "raAQBv7_svo": 0
+  }
+ },
+ {
+  "id": "q29",
+  "query": "coping with chronic illness as a christian",
+  "expectEmpty": false,
+  "grades": {
+   "ApqcawUQYe8": 0
+  }
+ },
+ {
+  "id": "q30",
+  "query": "how to break a porn addiction",
+  "expectEmpty": false,
+  "grades": {
+   "09kClrOUwpE": 2,
+   "BPUHvVIkQsU": 0,
+   "V_aAJGl4Ydk": 0
+  }
+ },
+ {
+  "id": "q31",
+  "query": "sermons about joy that isn't fake",
+  "expectEmpty": false,
+  "grades": {
+   "2GKa9jXsyQ4": 0,
+   "CvZwjZnXtr8": 0,
+   "FwqN88DvQ8E": 0,
+   "NcXbIxlYZnU": 0,
+   "QQU9R6hn6X0": 0,
+   "fhTRu_l0KlI": 0,
+   "ftk0wTpJMl8": 0,
+   "ulxMR098Pis": 2
+  }
+ },
+ {
+  "id": "q32",
+  "query": "what is worship actually about",
+  "expectEmpty": false,
+  "grades": {
+   "-NFehRy7JxA": 2,
+   "J160LqqT2fg": 1,
+   "PGHZbFnmE44": 0,
+   "VXiWCA93m3w": 1,
+   "YJyp7po1OLs": 2,
+   "gSVfvPAu_v8": 2,
+   "nnG8zmLSTcU": 1,
+   "zs1XzM-sP-0": 1
+  }
+ },
+ {
+  "id": "q33",
+  "query": "single and content, is that okay",
+  "expectEmpty": false,
+  "grades": {
+   "Bvs9Lhh1NcI": 3,
+   "Q_2llX08ucw": 0,
+   "kbaaTub_4ts": 0,
+   "nccmlUEqsaY": 0,
+   "nitLe6N2r-4": 0
+  }
+ },
+ {
+  "id": "q34",
+  "query": "sermons about jesus' parables",
+  "expectEmpty": false,
+  "grades": {
+   "--621IVuN1w": 1,
+   "68Ig8FnLtEQ": 0,
+   "E9IIqTRSdF8": 2,
+   "NT-vJ_ZEdFg": 0,
+   "S1yq1hwEoc0": 1,
+   "ftk0wTpJMl8": 1,
+   "k2KpWrz5h3w": 3,
+   "s3szFSM-E40": 2
+  }
+ },
+ {
+  "id": "q35",
+  "query": "how do I know god's will for my life",
+  "expectEmpty": false,
+  "grades": {
+   "1ENK4hhvaiI": 1,
+   "2KnY-KNTqu4": 3,
+   "2lHCAUtyGQk": 3,
+   "4f0lp3443CE": 1,
+   "FwqN88DvQ8E": 0,
+   "QBK35xk10nA": 3,
+   "VUE7rGRFfwM": 1,
+   "mqpCRskN4XI": 2
+  }
+ },
+ {
+  "id": "q36",
+  "query": "raising teenagers in faith",
+  "expectEmpty": false,
+  "grades": {
+   "3S5e4Vt6BY4": 0,
+   "4W7GfS3ETnY": 2,
+   "BPUHvVIkQsU": 2,
+   "dxZ5Fr7TPRI": 1,
+   "gBkK_nCQOkA": 1,
+   "jTkBfBU6kMA": 2,
+   "pIf1FW0LcDw": 1,
+   "xEgXP3rOq5E": 1
+  }
+ },
+ {
+  "id": "q37",
+  "query": "sermons on easter and resurrection",
+  "expectEmpty": false,
+  "grades": {
+   "E9IIqTRSdF8": 0,
+   "FwqN88DvQ8E": 0,
+   "iLbPsAlTRUE": 3,
+   "iRLLHvf6G0c": 0,
+   "lrHYKi1Zk7U": 0,
+   "snx7fWoWIHA": 3
+  }
+ },
+ {
+  "id": "q38",
+  "query": "feeling guilty about my past",
+  "expectEmpty": false,
+  "grades": {
+   "--621IVuN1w": 3,
+   "D-DgqdgLgW8": 2,
+   "EaZDHQzSAro": 2,
+   "FHs-mYcdh0w": 1,
+   "jTkBfBU6kMA": 3,
+   "oqGU8OGkfFY": 3,
+   "rhKdW_ZYUyA": 1,
+   "t7yT8prAXKg": 3
+  }
+ },
+ {
+  "id": "q39",
+  "query": "what does it mean to follow jesus daily",
+  "expectEmpty": false,
+  "grades": {
+   "C9p9bwqf84E": 3,
+   "QBK35xk10nA": 1,
+   "R9MrTiNuQi4": 3,
+   "Uf4WJNIHxNM": 1,
+   "dxZ5Fr7TPRI": 3,
+   "s3szFSM-E40": 3,
+   "sOFbrVlYdlU": 3,
+   "uj5421q1YeU": 1
+  }
+ },
+ {
+  "id": "q40",
+  "query": "sermons about courage and fear",
+  "expectEmpty": false,
+  "grades": {
+   "68Ig8FnLtEQ": 1,
+   "Bdc35JE-5a8": 2,
+   "FwqN88DvQ8E": 0,
+   "KRDiS5a7aVM": 2,
+   "RLzmx6ha9yk": 3,
+   "ftk0wTpJMl8": 1,
+   "lrHYKi1Zk7U": 1
+  }
+ },
+ {
+  "id": "q41",
+  "query": "how christians should think about politics",
+  "expectEmpty": false,
+  "grades": {
+   "9a4lI0jLiXg": 0,
+   "ApqcawUQYe8": 2,
+   "NT-vJ_ZEdFg": 1,
+   "gBkK_nCQOkA": 1,
+   "mWhodGfDwLk": 0,
+   "nnG8zmLSTcU": 0,
+   "zAyYMXC30P4": 0,
+   "zGiwQQqUpxw": 0
+  }
+ },
+ {
+  "id": "q42",
+  "query": "sermons for lent",
+  "expectEmpty": false,
+  "grades": {
+   "CvZwjZnXtr8": 1,
+   "E9IIqTRSdF8": 1,
+   "FwqN88DvQ8E": 0,
+   "ftk0wTpJMl8": 0,
+   "iRLLHvf6G0c": 3,
+   "lrHYKi1Zk7U": 0
+  }
+ },
+ {
+  "id": "q43",
+  "query": "empty nest, who am I now",
+  "expectEmpty": false,
+  "grades": {
+   "snx7fWoWIHA": 0
+  }
+ },
+ {
+  "id": "q44",
+  "query": "what does the bible say about friendship",
+  "expectEmpty": false,
+  "grades": {
+   "CCg9nKb8NiM": 0
+  }
+ },
+ {
+  "id": "q45",
+  "query": "sermons about quantum physics and faith",
+  "expectEmpty": true,
+  "grades": {
+   "-mBn7qvZlNg": 0,
+   "3S5e4Vt6BY4": 0,
+   "68Ig8FnLtEQ": 0,
+   "7o9SQ0GANKw": 0,
+   "NT-vJ_ZEdFg": 0,
+   "c7_1h549L00": 0,
+   "ftk0wTpJMl8": 0,
+   "xEgXP3rOq5E": 0
+  }
+ },
+ {
+  "id": "q46",
+  "query": "what does the bible say about cryptocurrency investing",
+  "expectEmpty": true,
+  "grades": {
+   "68Ig8FnLtEQ": 0,
+   "CCg9nKb8NiM": 0,
+   "UoVKh1gxDvk": 0,
+   "eR66-DntyRo": 0,
+   "nnG8zmLSTcU": 0
+  }
+ },
+ {
+  "id": "q47",
+  "query": "sermons on how to change a car tire",
+  "expectEmpty": true,
+  "grades": {
+   "BPUHvVIkQsU": 0,
+   "E9IIqTRSdF8": 0,
+   "FwqN88DvQ8E": 0,
+   "JUJVCv2Yb5I": 0,
+   "M1gUlJFhf2I": 0,
+   "NcXbIxlYZnU": 0,
+   "iRLLHvf6G0c": 0,
+   "lrHYKi1Zk7U": 0
+  }
+ },
+ {
+  "id": "q48",
+  "query": "trinity sermons about baseball",
+  "expectEmpty": true,
+  "grades": {}
+ },
+ {
+  "id": "q49",
+  "query": "david and goliath underdog story",
+  "expectEmpty": false,
+  "grades": {}
+ },
+ {
+  "id": "q50",
+  "query": "sermons about vision and dreaming big for the new year",
+  "expectEmpty": false,
+  "grades": {}
+ }
+]

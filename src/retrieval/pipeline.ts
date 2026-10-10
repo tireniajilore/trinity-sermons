@@ -126,7 +126,8 @@ export async function runSearch(
     candidates,
     intent,
     matchMode,
-    deps.config.overlapFloor
+    deps.config.overlapFloor,
+    deps.config.denseMaxDistance ?? null
   );
   const limited = kept.slice(0, limit);
 

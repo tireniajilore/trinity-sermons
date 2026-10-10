@@ -8,6 +8,8 @@ import { fileURLToPath } from "node:url";
 export interface RetrievalConfig {
   pipelineVersion: string;
   overlapFloor: number;
+  /** Max cosine distance (0=identical, 2=opposite) for dense keep. Null disables. */
+  denseMaxDistance: number | null;
   matchModeDefault: "strict" | "broad";
   fusion: { k: number; denseWeight: number; lexicalWeight: number };
   candidateCounts: { dense: number; lexical: number; fused: number };

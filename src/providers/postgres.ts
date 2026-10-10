@@ -102,7 +102,7 @@ export class PostgresCandidateProvider implements CandidateProvider {
     const embedding = await this.embedder.embed(intent.retrievalQuery).catch(() => null);
     if (embedding) {
       const { rows } = await this.pool.query(
-        `select video_id, fused_score
+        `select video_id, fused_score, dense_distance
          from hybrid_search_sermon_profiles($1::vector, $2, $3, $4, $5, $6, $7, $8)`,
         [
           JSON.stringify(embedding),
@@ -115,11 +115,11 @@ export class PostgresCandidateProvider implements CandidateProvider {
           fusion.lexicalWeight,
         ]
       );
-      return this.toCandidates(rows as Array<{ video_id: string; fused_score: number }>);
+      return this.toCandidates(rows as Array<{ video_id: string; fused_score: number; dense_distance: number | null }>);
     }
     // Lexical-only fallback when no query embedding is available.
     const { rows } = await this.pool.query(
-      `select p.video_id, 0::float8 as fused_score
+      `select p.video_id, 0::float8 as fused_score, null::float8 as dense_distance
        from sermon_profiles p
        join videos v on v.id = p.video_id
        where v.is_searchable and v.suppressed_at is null
@@ -128,11 +128,11 @@ export class PostgresCandidateProvider implements CandidateProvider {
        limit $2`,
       [intent.retrievalQuery, counts.fused]
     );
-    return this.toCandidates(rows as Array<{ video_id: string; fused_score: number }>);
+    return this.toCandidates(rows as Array<{ video_id: string; fused_score: number; dense_distance: number | null }>);
   }
 
   private async toCandidates(
-    rows: Array<{ video_id: string; fused_score: number }>
+    rows: Array<{ video_id: string; fused_score: number; dense_distance: number | null }>
   ): Promise<Candidate[]> {
     if (rows.length === 0) return [];
     const ids = rows.map((r) => r.video_id);
@@ -142,7 +142,11 @@ export class PostgresCandidateProvider implements CandidateProvider {
     );
     const byId = new Map((profileRows as ProfileRow[]).map((r) => [r.id, toRecord(r)]));
     return rows
-      .map((r) => ({ sermon: byId.get(r.video_id)!, fusedScore: Number(r.fused_score) }))
+      .map((r) => ({
+        sermon: byId.get(r.video_id)!,
+        fusedScore: Number(r.fused_score),
+        denseDistance: r.dense_distance === null ? null : Number(r.dense_distance),
+      }))
       .filter((c) => c.sermon !== undefined);
   }
 }

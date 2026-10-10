@@ -13,6 +13,9 @@ import type { SermonRecord } from "../sermons/types.js";
 export interface Candidate {
   sermon: SermonRecord;
   fusedScore: number;
+  /** Cosine distance (0=identical, 2=opposite) between query and sermon
+      embeddings. Null when the candidate came from lexical-only retrieval. */
+  denseDistance: number | null;
 }
 
 export interface CandidateProvider {
@@ -92,7 +95,7 @@ export class InMemoryCandidateProvider implements CandidateProvider {
     ).slice(0, counts.fused);
     const byId = new Map(sermons.map((s) => [s.sermonId, s]));
     return fused
-      .map(({ id, score: fusedScore }) => ({ sermon: byId.get(id)!, fusedScore }))
+      .map(({ id, score: fusedScore }) => ({ sermon: byId.get(id)!, fusedScore, denseDistance: null }))
       .filter((c) => c.sermon !== undefined);
   }
 }
