@@ -100,8 +100,6 @@ test("search_sermons: marriage query returns the marriage sermon first", async (
   const top = s.results[0];
   assert.ok(top.thesis.length > 20, "thesis present for agent judging");
   assert.equal(top.verificationStatus, "NOT_VERIFIED", "search results are discovery-only");
-  assert.equal(top.nextTool, "get_sermon", "search points to verification");
-  assert.equal(top.requiresVerification, true, "search requires verification");
   assert.ok(!("preacher" in top), "preacher moved to get_sermon");
   assert.ok(!("publishedAt" in top), "date moved to get_sermon");
   assert.ok(result.content[0].text.includes(top.title), "text fallback agrees with structured output");

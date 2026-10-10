@@ -37,12 +37,8 @@ export const DiscoveryItem = z.object({
   primaryTopics: z.array(z.string()),
   /** AI-generated summary of the sermon's message — NOT a verbatim quote. */
   thesis: z.string(),
-  /** Discovery only. This record is NOT verified for citation. */
+  /** Discovery only — not verified for citation. Call get_sermon for verified date, preacher, URL, and quotes. */
   verificationStatus: z.literal("NOT_VERIFIED"),
-  /** True: you MUST call get_sermon before citing date, preacher, URL, or quotes. */
-  requiresVerification: z.literal(true),
-  /** The tool to call next for verified evidence. */
-  nextTool: z.literal("get_sermon"),
 });
 
 // Full verified record — only from get_sermon.
