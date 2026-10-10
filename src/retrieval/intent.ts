@@ -13,38 +13,11 @@ export interface InterpretedIntent {
   retrievalQuery: string;
 }
 
-/** Canonical subject -> trigger words in explicit user language.
- *
- * Expanded 2026-10-09 from 3 to 20 subjects based on 47 human-labelled eval
- * queries. Triggers are conservative: common words that would false-positive
- * (faith, love, spirit, fear) are excluded or scoped. Multi-word subjects
- * like "holy spirit" are matched via their distinctive single word.
- */
+/** Canonical subject -> trigger words in explicit user language. */
 export const ALIAS_MAP: Record<string, string[]> = {
-  marriage: ["marriage", "married", "spouse", "husband", "wife", "dating"],
-  relationships: ["relationship", "relationships"],
-  grief: ["grief", "grieving", "mourning", "sorrow", "heartbreak"],
-  loss: ["loss"],
-  anxiety: ["anxiety", "anxious", "worry", "worried", "stress", "stressed", "overwhelmed"],
-  fear: ["fear", "afraid", "fears"],
-  hope: ["hope", "hopes", "hopeless", "hopeful"],
-  forgiveness: ["forgive", "forgiveness", "forgiving", "forgiven"],
-  prayer: ["pray", "prayer", "praying", "prayers"],
-  money: ["money", "generosity", "generous", "tithe", "tithing", "finances", "financial"],
-  purpose: ["purpose", "purposeful", "calling"],
-  doubt: ["doubt", "doubts", "doubting"],
-  grace: ["grace", "gracious"],
-  community: ["community", "fellowship", "belonging", "lonely", "loneliness", "isolated"],
-  rest: ["rest", "sabbath", "restful"],
-  temptation: ["temptation", "tempted", "tempting"],
-  worship: ["worship", "worshipping"],
-  identity: ["identity", "self-worth"],
-  joy: ["joy", "joyful", "rejoice", "rejoicing"],
-  discipleship: ["disciple", "discipleship", "follower"],
-  courage: ["courage", "courageous", "bravery", "brave"],
-  death: ["death", "dying", "afterlife", "heaven"],
-  guilt: ["guilt", "guilty", "shame", "ashamed"],
-  leadership: ["leadership", "leader", "leaders"],
+  marriage: ["marriage", "married", "relationship", "relationships", "spouse", "husband", "wife", "dating"],
+  grief: ["grief", "grieving", "loss", "heartbreak", "mourning", "sorrow"],
+  anxiety: ["anxiety", "anxious", "fear", "worry", "stress", "overwhelmed"],
 };
 
 export function normalizeQuery(query: string): string {
