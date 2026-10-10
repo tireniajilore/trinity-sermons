@@ -141,15 +141,16 @@ export function applyWholeSermonFilter(
       return false;
     }
     // 2. Dense meaning similarity: cosine distance between query and sermon
-    //    embeddings. Catches "drowning in debt" -> "financial stewardship"
-    //    where no words match. Null when lexical-only retrieval.
-    if (
-      denseMaxDistance !== null &&
-      c.denseDistance !== null &&
-      c.denseDistance <= denseMaxDistance
-    )
-      return true;
-    // 3. Fuzzy lexical overlap floor (backstop).
+    //    embeddings. When a dense signal exists, it is the gatekeeper —
+    //    lexical is only a backstop for the no-embedding fallback path.
+    //    Catches "drowning in debt" -> "financial stewardship" where no
+    //    words match; drops "quantum physics" where nothing is close.
+    if (denseMaxDistance !== null && c.denseDistance !== null) {
+      if (c.denseDistance <= denseMaxDistance) return true;
+      droppedByFloor += 1;
+      return false;
+    }
+    // 3. Fuzzy lexical overlap floor (only when no dense signal available).
     if (fuzzyOverlap(intent.retrievalQuery, c.sermon.retrievalText) >= overlapFloor) return true;
     droppedByFloor += 1;
     return false;
