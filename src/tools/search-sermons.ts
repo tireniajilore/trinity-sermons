@@ -39,8 +39,10 @@ export const DiscoveryItem = z.object({
   thesis: z.string(),
   /** Discovery only. This record is NOT verified for citation. */
   verificationStatus: z.literal("NOT_VERIFIED"),
-  /** Call this tool with sermonId to get verified date, preacher, URL, citation, and keyQuotes. */
-  nextAction: z.literal("get_sermon"),
+  /** True: you MUST call get_sermon before citing date, preacher, URL, or quotes. */
+  requiresVerification: z.literal(true),
+  /** The tool to call next for verified evidence. */
+  nextTool: z.literal("get_sermon"),
 });
 
 // Full verified record — only from get_sermon.
