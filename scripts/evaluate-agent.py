@@ -33,6 +33,7 @@ TOOLS = [
     {"name": "find_similar_sermons", "description": "Sermons like a given one. Args: sermonId (str), limit (int)."},
     {"name": "verify_quote", "description": "Check if a phrase appears verbatim in keyQuotes. Args: quote (str), sermonId (str, optional)."},
     {"name": "verify_sermon_references", "description": "Verify sermon IDs exist. Returns canonical metadata. Args: sermonIds (list)."},
+    {"name": "cite_sermons", "description": "Generate canonical citations. REQUIRES evidenceToken from get_sermon for each sermonId. Args: citations (list of {sermonId, evidenceToken})."},
 ]
 
 def mcp_call(tool_name, args):
@@ -73,7 +74,7 @@ Tools:
 To call a tool, respond with ONLY: {"tool": "<name>", "args": {...}}
 To answer the user, respond with ONLY: {"answer": "<your answer>"}
 
-WORKFLOW: Search (discover) -> get_sermon (verify evidence) -> verify_quote / verify_sermon_references (confirm) -> Answer (cite evidence or acknowledge uncertainty).
+WORKFLOW: Search (discover) -> get_sermon (verify evidence, get evidenceToken) -> cite_sermons (generate canonical citations) -> Answer (use only server-generated citations or acknowledge uncertainty).
 """
 
 def run_agent(question, max_steps=8):
