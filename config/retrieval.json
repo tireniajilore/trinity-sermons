@@ -16,6 +16,7 @@
   "pipelineVersion": "2.0.0",
   "denseMaxDistance": 0.75,
   "llmRerank": {
-    "enabled": true
+    "enabled": true,
+    "keepThreshold": 1
   }
 }
