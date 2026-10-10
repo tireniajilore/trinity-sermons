@@ -10,7 +10,7 @@
 import type { Candidate } from "./candidates.js";
 
 export const LLM_RERANK_MODEL = "gpt-4o-mini";
-export const LLM_RERANK_PROMPT_VERSION = "judge-v1";
+export const LLM_RERANK_PROMPT_VERSION = "judge-v2";
 
 export interface RerankVerdict {
   sermonId: string;
@@ -37,14 +37,14 @@ const SYSTEM_PROMPT = `You are judging sermon search results for relevance. A us
 
 For each candidate, decide: KEEP or DROP.
 
-KEEP only if the sermon is substantially ABOUT the user's topic — the topic is a primary focus of the sermon, something the preacher spends meaningful time on.
+KEEP if the sermon would genuinely help someone asking this question — the topic gets meaningful treatment, not just a drive-by mention. It does not need to be the sermon's single primary focus; a substantial section on the topic counts.
 
 DROP if:
 - The topic is only mentioned in passing (a single illustration, a brief aside, one bullet in a list of many).
 - The sermon is about something else entirely and matched on a coincidental word.
-- You cannot tell from the summary that the topic is a real focus.
+- A listener asking this question would feel misled by the recommendation.
 
-Be strict. It is better to return an empty list than to keep weak matches. If none of the candidates are truly about the topic, keep none.
+Lean toward keeping when the connection is real but not central. Drop only the clear misses. If none of the candidates would genuinely help, keep none.
 
 Respond with JSON only: {"verdicts": [{"sermonId": "...", "keep": true/false, "reason": "one short sentence"}]}`;
 
