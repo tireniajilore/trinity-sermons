@@ -6,7 +6,10 @@
 -- can. This returns it alongside the fused score so the application-layer
 -- whole-sermon filter can threshold on meaning, not just words.
 
-create or replace function hybrid_search_sermon_profiles(
+-- Postgres cannot change a function's return type via CREATE OR REPLACE.
+drop function if exists hybrid_search_sermon_profiles(vector, text, integer, integer, integer, integer, double precision, double precision);
+
+create function hybrid_search_sermon_profiles(
   query_embedding vector(1536),
   query_text text,
   dense_limit integer default 50,
