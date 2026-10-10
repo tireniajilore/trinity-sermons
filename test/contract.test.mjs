@@ -231,3 +231,15 @@ test("find_similar_sermons: excludes self, unknown id -> empty", async () => {
   assert.equal(missing.structuredContent.sermons.length, 0);
   assert.equal(missing.structuredContent.sourceSermon, null);
 });
+
+test("resources/list exposes the faith-assistant skill", async () => {
+  const resp = await rpc("resources/list", {});
+  const uris = resp.result.resources.map((r) => r.uri);
+  assert.ok(uris.includes("skill://trinity-sermons/faith-assistant"));
+  const read = await rpc("resources/read", {
+    uri: "skill://trinity-sermons/faith-assistant",
+  });
+  const text = read.result.contents[0].text;
+  assert.ok(text.includes("Never invent quotes"));
+  assert.ok(text.includes("search_sermons"));
+});

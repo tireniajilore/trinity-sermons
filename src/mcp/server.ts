@@ -3,6 +3,9 @@
 // across callers.
 
 import { McpServer } from "@modelcontextprotocol/server";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   defaultPipelineDeps,
   type PipelineDeps,
@@ -17,10 +20,19 @@ import { findSimilarTool } from "../tools/find-similar-sermons.js";
 export const SERVER_NAME = "trinity-sermons";
 export const SERVER_VERSION = "1.0.0";
 
+const SKILL_URI = "skill://trinity-sermons/faith-assistant";
+
+function loadSkill(): string {
+  const dir = dirname(fileURLToPath(import.meta.url));
+  // src/mcp/server.ts -> <root>/skills/faith-assistant/SKILL.md
+  const path = join(dir, "..", "..", "skills", "faith-assistant", "SKILL.md");
+  return readFileSync(path, "utf8");
+}
+
 export function createMcpServer(deps: PipelineDeps = defaultPipelineDeps()): McpServer {
   const server = new McpServer(
     { name: SERVER_NAME, version: SERVER_VERSION },
-    { capabilities: { tools: {} } }
+    { capabilities: { tools: {}, resources: {} } }
   );
 
   server.registerTool(
@@ -87,6 +99,29 @@ export function createMcpServer(deps: PipelineDeps = defaultPipelineDeps()): Mcp
       annotations: findSimilarTool.annotations,
     },
     async (args) => findSimilarTool.handler(deps, args)
+  );
+
+  // Faith-assistant skill as a resource: guidance on using these tools well
+  // (no invented quotes, correct attribution, honest empties). Clients that
+  // understand Agent Skills can load skill://trinity-sermons/faith-assistant.
+  server.registerResource(
+    "faith-assistant-skill",
+    SKILL_URI,
+    {
+      title: "Trinity Faith Assistant",
+      description:
+        "How to be a good faith assistant with these tools: when to use each tool, and ground rules (never invent quotes, attribute correctly, say when nothing matches).",
+      mimeType: "text/markdown",
+    },
+    async (uri) => ({
+      contents: [
+        {
+          uri: uri.href,
+          mimeType: "text/markdown",
+          text: loadSkill(),
+        },
+      ],
+    })
   );
 
   return server;
