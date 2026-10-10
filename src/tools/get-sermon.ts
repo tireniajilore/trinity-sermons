@@ -3,6 +3,7 @@
 import { z } from "zod";
 import type { PipelineDeps } from "../retrieval/pipeline.js";
 import { youtubeUrl } from "../sermons/types.js";
+import { formatCitation } from "./search-sermons.js";
 
 export const GetSermonInput = z.object({ sermonId: z.string().min(1) }).strict();
 
@@ -26,6 +27,10 @@ export const GetSermonOutput = z.object({
     series: z.string().nullable(),
     keyQuotes: z.array(z.string()),
   }),
+  /** Pre-formatted citation — copy verbatim. Only available here, not in search results. */
+  citation: z.string(),
+  /** This record is verified for citation. */
+  verificationStatus: z.literal("VERIFIED"),
   answerPolicy: z.object({
     quoteOnlyVerbatimFromKeyQuotes: z.literal(true),
     attributePreacherAndDateExactly: z.literal(true),
@@ -79,6 +84,13 @@ export const getSermonTool = {
         series: record.series,
         keyQuotes: record.profile.keyQuotes,
       },
+      citation: formatCitation(
+        record.title,
+        record.preacher,
+        record.publishedAt,
+        youtubeUrl(record.youtubeVideoId)
+      ),
+      verificationStatus: "VERIFIED" as const,
       answerPolicy: {
         quoteOnlyVerbatimFromKeyQuotes: true as const,
         attributePreacherAndDateExactly: true as const,

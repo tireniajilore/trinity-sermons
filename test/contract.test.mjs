@@ -99,9 +99,10 @@ test("search_sermons: marriage query returns the marriage sermon first", async (
   assert.ok(s.suggestedQueries.length > 0, "suggestedQueries always returned");
   const top = s.results[0];
   assert.ok(top.thesis.length > 20, "thesis present for agent judging");
-  assert.equal(top.preacher, "Pastor Taylor Wilkerson");
-  assert.equal(top.durationSeconds, 2280);
-  for (const r of s.results) assert.match(r.youtubeUrl, YT_RE, "no timestamp params");
+  assert.equal(top.verificationStatus, "NOT_VERIFIED", "search results are discovery-only");
+  assert.equal(top.nextAction, "get_sermon", "search points to verification");
+  assert.ok(!("preacher" in top), "preacher moved to get_sermon");
+  assert.ok(!("publishedAt" in top), "date moved to get_sermon");
   assert.ok(result.content[0].text.includes(top.title), "text fallback agrees with structured output");
 });
 

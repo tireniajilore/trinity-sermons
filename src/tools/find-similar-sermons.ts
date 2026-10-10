@@ -63,6 +63,7 @@ export const findSimilarTool = {
           durationSeconds: s.durationSeconds,
           citation: formatCitation(s.title, s.preacher, s.publishedAt, url),
           quotable: false as const,
+          verificationStatus: "VERIFIED" as const,
         };
       }),
     });
