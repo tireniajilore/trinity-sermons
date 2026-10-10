@@ -22,7 +22,7 @@ export const ListSeriesSermonsOutput = z.object({
 export const listSeriesSermonsTool = {
   name: "list_series_sermons",
   description:
-    "Get the sermons in a Trinity series (e.g. 'Ten Commandments'), oldest first. Use after list_series, or when someone wants to follow a whole teaching series in order.",
+    "Get the sermons in a Trinity series (e.g. 'Ten Commandments'), oldest first. Use after list_series, or when someone wants to follow a whole teaching series in order. GROUNDING: cite only the sermons returned, in the order returned.",
   inputSchema: ListSeriesSermonsInput,
   outputSchema: ListSeriesSermonsOutput,
   annotations: {

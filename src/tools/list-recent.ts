@@ -14,7 +14,7 @@ export const ListRecentOutput = z.object({ sermons: z.array(SermonResultItem) })
 export const listRecentTool = {
   name: "list_recent_sermons",
   description:
-    "List the most recently preached Trinity New York sermons, newest first. Use when someone asks what Trinity has preached lately without naming a topic.",
+    "List the most recently preached Trinity New York sermons, newest first. Use when someone asks what Trinity has preached lately without naming a topic. GROUNDING: cite only the titles, dates, and preachers returned. Never invent sermon details.",
   inputSchema: ListRecentInput,
   outputSchema: ListRecentOutput,
   annotations: {

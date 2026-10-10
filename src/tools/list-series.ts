@@ -22,7 +22,7 @@ export const ListSeriesOutput = z.object({
 export const listSeriesTool = {
   name: "list_series",
   description:
-    "List Trinity New York sermon series (e.g. Ten Commandments), most recently preached first. Use when someone asks what series Trinity is in or has taught.",
+    "List Trinity New York sermon series (e.g. Ten Commandments), most recently preached first. Use when someone asks what series Trinity is in or has taught. GROUNDING: cite only the series names, counts, and dates returned.",
   inputSchema: ListSeriesInput,
   outputSchema: ListSeriesOutput,
   annotations: {

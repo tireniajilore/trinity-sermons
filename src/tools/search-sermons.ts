@@ -31,6 +31,14 @@ export const SermonResultItem = z.object({
   durationSeconds: z.number().nullable(),
 });
 
+export const AnswerPolicy = z.object({
+  useOnlyReturnedSources: z.literal(true),
+  doNotInventQuotes: z.literal(true),
+  sayWhenNotFound: z.literal(true),
+  citeVerbatimFrom: z.literal("keyQuotes via get_sermon"),
+  distinguishInterpretation: z.literal(true),
+});
+
 export const SearchSermonsOutput = z.object({
   query: z.string(),
   interpretedIntent: z.object({
@@ -41,6 +49,7 @@ export const SearchSermonsOutput = z.object({
   resultCount: z.number().int(),
   results: z.array(SermonResultItem),
   suggestedQueries: z.array(z.string()),
+  answerPolicy: AnswerPolicy,
 });
 
 function textSummary(payload: SearchPayload): string {
@@ -64,7 +73,7 @@ function textSummary(payload: SearchPayload): string {
 export const searchSermonsTool = {
   name: "search_sermons",
   description:
-    "Find complete Trinity New York sermons about a topic or life situation. Write a rich query — paste the situation verbatim (up to 2000 chars). Returns whole-message matches with blurbs, theses, and YouTube links; check appliedFilters to see how the query was interpreted, and use matchMode 'broad' if 'strict' returns too little. Empty results mean nothing clearly matched.",
+    "Find complete Trinity New York sermons about a topic or life situation. Write a rich query — paste the situation verbatim (up to 2000 chars). Returns whole-message matches with blurbs, theses, and YouTube links; check appliedFilters to see how the query was interpreted, and use matchMode 'broad' if 'strict' returns too little. Empty results mean nothing clearly matched. GROUNDING: cite only sermons, titles, preachers, and theses from the returned results. Never invent quotes — use get_sermon for verbatim keyQuotes. Distinguish what the sermons say from your own interpretation. If results are empty, say so plainly.",
   inputSchema: SearchSermonsInput,
   outputSchema: SearchSermonsOutput,
   annotations: {

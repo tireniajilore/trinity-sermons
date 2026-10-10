@@ -38,6 +38,13 @@ export interface SearchPayload {
   resultCount: number;
   results: SearchResultItem[];
   suggestedQueries: string[];
+  answerPolicy: {
+    useOnlyReturnedSources: true;
+    doNotInventQuotes: true;
+    sayWhenNotFound: true;
+    citeVerbatimFrom: "keyQuotes via get_sermon";
+    distinguishInterpretation: true;
+  };
 }
 
 export interface PipelineDeps {
@@ -171,6 +178,13 @@ export async function runSearch(
     resultCount: limited.length,
     results: limited.map((c) => toResultItem(c.sermon)),
     suggestedQueries: suggestedQueriesFor(intent),
+    answerPolicy: {
+      useOnlyReturnedSources: true as const,
+      doNotInventQuotes: true as const,
+      sayWhenNotFound: true as const,
+      citeVerbatimFrom: "keyQuotes via get_sermon" as const,
+      distinguishInterpretation: true as const,
+    },
   };
   deps.cache.set(cacheKey, payload);
   return payload;

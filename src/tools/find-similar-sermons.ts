@@ -20,7 +20,7 @@ export const FindSimilarOutput = z.object({
 export const findSimilarTool = {
   name: "find_similar_sermons",
   description:
-    "Find Trinity sermons similar to a given one (by sermonId from search_sermons, get_sermon, or list_recent_sermons). Use when someone liked a sermon and wants more like it.",
+    "Find Trinity sermons similar to a given one (by sermonId from search_sermons, get_sermon, or list_recent_sermons). Use when someone liked a sermon and wants more like it. GROUNDING: cite only the sermons returned. Never invent similar titles.",
   inputSchema: FindSimilarInput,
   outputSchema: FindSimilarOutput,
   annotations: {

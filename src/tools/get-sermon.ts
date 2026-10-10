@@ -26,12 +26,17 @@ export const GetSermonOutput = z.object({
     series: z.string().nullable(),
     keyQuotes: z.array(z.string()),
   }),
+  answerPolicy: z.object({
+    quoteOnlyVerbatimFromKeyQuotes: z.literal(true),
+    attributePreacherAndDateExactly: z.literal(true),
+    neverParaphraseAsQuotation: z.literal(true),
+  }),
 });
 
 export const getSermonTool = {
   name: "get_sermon",
   description:
-    "Get the full profile of one Trinity sermon by its sermonId (from search_sermons or list_recent_sermons): thesis, topics, audience needs, questions answered, teaching framework, and scriptures.",
+    "Get the full profile of one Trinity sermon by its sermonId (from search_sermons or list_recent_sermons): thesis, topics, audience needs, questions answered, teaching framework, scriptures, and verbatim keyQuotes. GROUNDING: quote only from keyQuotes, verbatim. Attribute the preacher and date exactly as returned. Never paraphrase as quotation.",
   inputSchema: GetSermonInput,
   outputSchema: GetSermonOutput,
   annotations: {
@@ -73,6 +78,11 @@ export const getSermonTool = {
         durationSeconds: record.durationSeconds,
         series: record.series,
         keyQuotes: record.profile.keyQuotes,
+      },
+      answerPolicy: {
+        quoteOnlyVerbatimFromKeyQuotes: true as const,
+        attributePreacherAndDateExactly: true as const,
+        neverParaphraseAsQuotation: true as const,
       },
     });
     const quote = record.profile.keyQuotes[0]
