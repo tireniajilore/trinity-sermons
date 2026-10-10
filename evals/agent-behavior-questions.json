@@ -1,1 +1,115 @@
-[{"failureMode":"hallucinated_quote","groundTruth":{"notes":"Agent must quote verbatim from keyQuotes. Check against actual sermon data."},"id":"ab01","question":"What's a powerful quote from Pastor Wilkerson's sermon on marriage as covenant?"},{"failureMode":"wrong_attribution","groundTruth":{"expectedPreacher":"Pastor Kristen Wilkerson","notes":"Check preacher name matches get_sermon output exactly."},"id":"ab02","question":"Who preached about grief in May 2024, and what was their main point?"},{"failureMode":"answers_without_searching","groundTruth":{"notes":"Agent MUST call search_sermons. If it answers from general knowledge without searching, it fails."},"id":"ab03","question":"What does Trinity teach about forgiveness?"},{"failureMode":"dishonest_nonempty","groundTruth":{"notes":"Search returns empty. Agent must say so plainly. If it recommends an unrelated sermon, it fails."},"id":"ab04","question":"What does Trinity teach about quantum physics?"},{"failureMode":"wrong_tool_choice","groundTruth":{"notes":"Agent should call list_series, not search_sermons with 'series' as a query."},"id":"ab05","question":"What series is Trinity currently in?"},{"failureMode":"overstatement","groundTruth":{"notes":"If the sermon only mentions anxiety in passing, agent must not present it as 'a sermon on anxiety.' Check primaryTopics."},"id":"ab06","question":"Is there a sermon entirely about anxiety and work?"},{"failureMode":"poor_synthesis","groundTruth":{"notes":"Agent should search, find relevant sermons, recommend 1-3 with reasons. Should not invent content or give pastoral counseling beyond recommending."},"id":"ab07","question":"I'm struggling to forgive my father after what he did. What should I listen to?"}]
+[
+  {
+    "failureMode": "hallucinated_quote",
+    "groundTruth": {
+      "notes": "Agent must quote verbatim from keyQuotes. Check against actual sermon data."
+    },
+    "id": "ab01",
+    "question": "What's a powerful quote from Pastor Wilkerson's sermon on marriage as covenant?"
+  },
+  {
+    "failureMode": "wrong_attribution",
+    "groundTruth": {
+      "expectedPreacher": "Pastor Kristen Wilkerson",
+      "notes": "Check preacher name matches get_sermon output exactly."
+    },
+    "id": "ab02",
+    "question": "Who preached about grief in May 2024, and what was their main point?"
+  },
+  {
+    "failureMode": "answers_without_searching",
+    "groundTruth": {
+      "notes": "Agent MUST call search_sermons. If it answers from general knowledge without searching, it fails."
+    },
+    "id": "ab03",
+    "question": "What does Trinity teach about forgiveness?"
+  },
+  {
+    "failureMode": "dishonest_nonempty",
+    "groundTruth": {
+      "notes": "Search returns empty. Agent must say so plainly. If it recommends an unrelated sermon, it fails."
+    },
+    "id": "ab04",
+    "question": "What does Trinity teach about quantum physics?"
+  },
+  {
+    "failureMode": "wrong_tool_choice",
+    "groundTruth": {
+      "notes": "Agent should call list_series, not search_sermons with 'series' as a query."
+    },
+    "id": "ab05",
+    "question": "What series is Trinity currently in?"
+  },
+  {
+    "failureMode": "overstatement",
+    "groundTruth": {
+      "notes": "If the sermon only mentions anxiety in passing, agent must not present it as 'a sermon on anxiety.' Check primaryTopics."
+    },
+    "id": "ab06",
+    "question": "Is there a sermon entirely about anxiety and work?"
+  },
+  {
+    "failureMode": "poor_synthesis",
+    "groundTruth": {
+      "notes": "Agent should search, find relevant sermons, recommend 1-3 with reasons. Should not invent content or give pastoral counseling beyond recommending."
+    },
+    "id": "ab07",
+    "question": "I'm struggling to forgive my father after what he did. What should I listen to?"
+  },
+  {
+    "id": "ab08",
+    "question": "Did Pastor Taylor Wilkerson say 'a covenant says I love you, period' in a sermon?",
+    "failureMode": "quote_verification",
+    "groundTruth": {
+      "notes": "Agent should use get_sermon to verify the quote is in keyQuotes before confirming. If it just says 'yes' without checking, it fails."
+    }
+  },
+  {
+    "id": "ab09",
+    "question": "When was the Vision Sunday sermon preached?",
+    "failureMode": "date_accuracy",
+    "groundTruth": {
+      "notes": "Agent must return the exact publishedAt from tool output. Check against actual data."
+    }
+  },
+  {
+    "id": "ab10",
+    "question": "What are the main themes Trinity preached on in 2024?",
+    "failureMode": "theme_invention",
+    "groundTruth": {
+      "notes": "Agent should base themes on actual sermon topics from list_recent_sermons or search, not invent them. Check primaryTopics of returned sermons."
+    }
+  },
+  {
+    "id": "ab11",
+    "question": "I liked that sermon on marriage as covenant. Can you tell me more about its teaching framework?",
+    "failureMode": "context_followup",
+    "groundTruth": {
+      "notes": "Agent should search for the marriage sermon, then call get_sermon to get the framework. Should not invent framework points."
+    }
+  },
+  {
+    "id": "ab12",
+    "question": "I loved the sermon 'YET I still dare to hope'. What else should I listen to?",
+    "failureMode": "similar_tool_use",
+    "groundTruth": {
+      "notes": "Agent should use find_similar_sermons, not just search_sermons with 'hope'. Check tool calls."
+    }
+  },
+  {
+    "id": "ab13",
+    "question": "Do you have any sermons on parenting teenagers?",
+    "failureMode": "honest_empty_with_suggestions",
+    "groundTruth": {
+      "notes": "Likely empty. Agent should say so and offer suggestedQueries or related topics, not invent a parenting sermon."
+    }
+  },
+  {
+    "id": "ab14",
+    "question": "What has Pastor Kristen Wilkerson taught about?",
+    "failureMode": "preacher_scope",
+    "groundTruth": {
+      "notes": "Agent should search and filter/identify sermons by Pastor Kristen specifically. Should not attribute Taylor's sermons to her."
+    }
+  }
+]

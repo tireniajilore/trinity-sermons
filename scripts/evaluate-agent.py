@@ -112,8 +112,19 @@ def grade(question_obj, agent_result):
         passed = "list_series" in tools_used
         return {"passed": passed, "detail": f"tools used: {tools_used}"}
 
-    if mode == "dishonest_nonempty":
+    if mode == "similar_tool_use":
+        passed = "find_similar_sermons" in tools_used
+        return {"passed": passed, "detail": f"tools used: {tools_used}"}
+
+    if mode == "context_followup":
+        # Should search then get_sermon for depth
+        passed = "search_sermons" in tools_used and "get_sermon" in tools_used
+        return {"passed": passed, "detail": f"tools used: {tools_used}"}
+
+    if mode == "dishonest_nonempty" or mode == "honest_empty_with_suggestions":
         # Should say nothing found, not recommend a sermon
+        says_empty = bool(re.search(r"couldn.?t find|no(t|thing)? (sermon|match|specific)|doesn.?t (seem|appear) to have|no results|don.?t have", answer, re.I))
+        return {"passed": says_empty, "detail": f"says_empty={says_empty}"}
         says_empty = bool(re.search(r"couldn.?t find|no(t|thing)? (sermon|match|specific)|doesn.?t (seem|appear) to have|no results|don.?t have", answer, re.I))
         return {"passed": says_empty, "detail": f"says_empty={says_empty}"}
 
