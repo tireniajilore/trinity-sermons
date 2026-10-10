@@ -19,6 +19,16 @@ export const SearchSermonsInput = z
   })
   .strict();
 
+export function formatCitation(
+  title: string,
+  preacher: string | null,
+  publishedAt: string,
+  youtubeUrl: string
+): string {
+  const who = preacher ? ` by ${preacher}` : "";
+  return `"${title}"${who} (${publishedAt}) — ${youtubeUrl}`;
+}
+
 export const SermonResultItem = z.object({
   sermonId: z.string(),
   title: z.string(),
@@ -29,6 +39,8 @@ export const SermonResultItem = z.object({
   thesis: z.string(),
   preacher: z.string().nullable(),
   durationSeconds: z.number().nullable(),
+  /** Pre-formatted citation — copy verbatim instead of constructing your own. */
+  citation: z.string(),
 });
 
 export const AnswerPolicy = z.object({

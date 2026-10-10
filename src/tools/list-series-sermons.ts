@@ -3,7 +3,7 @@
 import { z } from "zod";
 import type { PipelineDeps } from "../retrieval/pipeline.js";
 import { youtubeUrl } from "../sermons/types.js";
-import { SermonResultItem } from "./search-sermons.js";
+import { SermonResultItem, formatCitation } from "./search-sermons.js";
 
 export const ListSeriesSermonsInput = z
   .object({
@@ -33,17 +33,21 @@ export const listSeriesSermonsTool = {
   },
   async handler(deps: PipelineDeps, args: z.infer<typeof ListSeriesSermonsInput>) {
     const sermons = await deps.repository.listSeriesSermons(args.series, args.limit);
-    const toItem = (s: (typeof sermons)[number]) => ({
-      sermonId: s.sermonId,
-      title: s.title,
-      publishedAt: s.publishedAt,
-      blurb: s.profile.shortBlurb,
-      primaryTopics: s.profile.primaryTopics,
-      youtubeUrl: youtubeUrl(s.youtubeVideoId),
-      thesis: s.profile.thesis,
-      preacher: s.preacher,
-      durationSeconds: s.durationSeconds,
-    });
+    const toItem = (s: (typeof sermons)[number]) => {
+      const url = youtubeUrl(s.youtubeVideoId);
+      return {
+        sermonId: s.sermonId,
+        title: s.title,
+        publishedAt: s.publishedAt,
+        blurb: s.profile.shortBlurb,
+        primaryTopics: s.profile.primaryTopics,
+        youtubeUrl: url,
+        thesis: s.profile.thesis,
+        preacher: s.preacher,
+        durationSeconds: s.durationSeconds,
+        citation: formatCitation(s.title, s.preacher, s.publishedAt, url),
+      };
+    };
     if (sermons.length === 0) {
       const suggestedSeries = await deps.repository.suggestSeries(args.series, 5);
       const structuredContent = ListSeriesSermonsOutput.parse({

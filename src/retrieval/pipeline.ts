@@ -18,6 +18,7 @@ import {
 } from "../providers/postgres.js";
 import { OpenAIEmbedder } from "../providers/openai.js";
 import { youtubeUrl, type SermonRecord } from "../sermons/types.js";
+import { formatCitation } from "../tools/search-sermons.js";
 
 export interface SearchResultItem {
   sermonId: string;
@@ -29,6 +30,7 @@ export interface SearchResultItem {
   thesis: string;
   preacher: string | null;
   durationSeconds: number | null;
+  citation: string;
 }
 
 export interface SearchPayload {
@@ -81,16 +83,18 @@ export function defaultPipelineDeps(): PipelineDeps {
 }
 
 function toResultItem(s: SermonRecord): SearchResultItem {
+  const url = youtubeUrl(s.youtubeVideoId);
   return {
     sermonId: s.sermonId,
     title: s.title,
     publishedAt: s.publishedAt,
     blurb: s.profile.shortBlurb,
     primaryTopics: s.profile.primaryTopics,
-    youtubeUrl: youtubeUrl(s.youtubeVideoId),
+    youtubeUrl: url,
     thesis: s.profile.thesis,
     preacher: s.preacher,
     durationSeconds: s.durationSeconds,
+    citation: formatCitation(s.title, s.preacher, s.publishedAt, url),
   };
 }
 

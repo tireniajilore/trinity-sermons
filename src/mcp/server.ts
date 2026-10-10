@@ -16,6 +16,7 @@ import { listRecentTool } from "../tools/list-recent.js";
 import { listSeriesTool } from "../tools/list-series.js";
 import { listSeriesSermonsTool } from "../tools/list-series-sermons.js";
 import { findSimilarTool } from "../tools/find-similar-sermons.js";
+import { verifyQuoteTool } from "../tools/verify-quote.js";
 
 export const SERVER_NAME = "trinity-sermons";
 export const SERVER_VERSION = "1.0.0";
@@ -99,6 +100,17 @@ export function createMcpServer(deps: PipelineDeps = defaultPipelineDeps()): Mcp
       annotations: findSimilarTool.annotations,
     },
     async (args) => findSimilarTool.handler(deps, args)
+  );
+
+  server.registerTool(
+    verifyQuoteTool.name,
+    {
+      description: verifyQuoteTool.description,
+      inputSchema: verifyQuoteTool.inputSchema,
+      outputSchema: verifyQuoteTool.outputSchema,
+      annotations: verifyQuoteTool.annotations,
+    },
+    async (args) => verifyQuoteTool.handler(deps, args)
   );
 
   // Faith-assistant skill as a resource: guidance on using these tools well

@@ -3,7 +3,7 @@
 import { z } from "zod";
 import type { PipelineDeps } from "../retrieval/pipeline.js";
 import { youtubeUrl } from "../sermons/types.js";
-import { SermonResultItem } from "./search-sermons.js";
+import { SermonResultItem, formatCitation } from "./search-sermons.js";
 
 export const FindSimilarInput = z
   .object({
@@ -49,17 +49,21 @@ export const findSimilarTool = {
     const sermons = await deps.repository.findSimilar(args.sermonId, args.limit);
     const structuredContent = FindSimilarOutput.parse({
       sourceSermon: { sermonId: source.sermonId, title: source.title },
-      sermons: sermons.map((s) => ({
-        sermonId: s.sermonId,
-        title: s.title,
-        publishedAt: s.publishedAt,
-        blurb: s.profile.shortBlurb,
-        primaryTopics: s.profile.primaryTopics,
-        youtubeUrl: youtubeUrl(s.youtubeVideoId),
-        thesis: s.profile.thesis,
-        preacher: s.preacher,
-        durationSeconds: s.durationSeconds,
-      })),
+      sermons: sermons.map((s) => {
+        const url = youtubeUrl(s.youtubeVideoId);
+        return {
+          sermonId: s.sermonId,
+          title: s.title,
+          publishedAt: s.publishedAt,
+          blurb: s.profile.shortBlurb,
+          primaryTopics: s.profile.primaryTopics,
+          youtubeUrl: url,
+          thesis: s.profile.thesis,
+          preacher: s.preacher,
+          durationSeconds: s.durationSeconds,
+          citation: formatCitation(s.title, s.preacher, s.publishedAt, url),
+        };
+      }),
     });
     const lines = sermons.map((s, i) => `${i + 1}. ${s.title} (${s.publishedAt})`);
     return {

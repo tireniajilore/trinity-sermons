@@ -73,10 +73,10 @@ test("initialize reports server identity", async () => {
   assert.equal(resp.result.serverInfo.version, "1.0.0");
 });
 
-test("tools/list exposes exactly the six documented tools", async () => {
+test("tools/list exposes exactly the seven documented tools", async () => {
   const resp = await rpc("tools/list", {});
   const names = resp.result.tools.map((t) => t.name).sort();
-  assert.deepEqual(names, ["find_similar_sermons", "get_sermon", "list_recent_sermons", "list_series", "list_series_sermons", "search_sermons"]);
+  assert.deepEqual(names, ["find_similar_sermons", "get_sermon", "list_recent_sermons", "list_series", "list_series_sermons", "search_sermons", "verify_quote"]);
   for (const t of resp.result.tools) {
     assert.equal(t.annotations.readOnlyHint, true, `${t.name} readOnlyHint`);
     assert.equal(t.annotations.destructiveHint, false, `${t.name} destructiveHint`);
