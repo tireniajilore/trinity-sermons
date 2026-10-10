@@ -19,6 +19,7 @@ import { findSimilarTool } from "../tools/find-similar-sermons.js";
 import { verifyQuoteTool } from "../tools/verify-quote.js";
 import { verifyRefsTool } from "../tools/verify-sermon-refs.js";
 import { citeSermonsTool } from "../tools/cite-sermons.js";
+import { answerQuestionTool } from "../tools/answer-question.js";
 
 export const SERVER_NAME = "trinity-sermons";
 export const SERVER_VERSION = "1.0.0";
@@ -135,6 +136,17 @@ export function createMcpServer(deps: PipelineDeps = defaultPipelineDeps()): Mcp
       annotations: citeSermonsTool.annotations,
     },
     async (args) => citeSermonsTool.handler(deps, args)
+  );
+
+  server.registerTool(
+    answerQuestionTool.name,
+    {
+      description: answerQuestionTool.description,
+      inputSchema: answerQuestionTool.inputSchema,
+      outputSchema: answerQuestionTool.outputSchema,
+      annotations: answerQuestionTool.annotations,
+    },
+    async (args) => answerQuestionTool.handler(deps, args)
   );
 
   // Faith-assistant skill as a resource: guidance on using these tools well
