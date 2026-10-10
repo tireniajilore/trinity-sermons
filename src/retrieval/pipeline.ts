@@ -26,6 +26,7 @@ export interface SearchResultItem {
   primaryTopics: string[];
   thesis: string;
   verificationStatus: "NOT_VERIFIED";
+  nextAction: "get_sermon";
 }
 
 export interface SearchPayload {
@@ -85,6 +86,7 @@ function toResultItem(s: SermonRecord): SearchResultItem {
     primaryTopics: s.profile.primaryTopics,
     thesis: s.profile.thesis,
     verificationStatus: "NOT_VERIFIED",
+    nextAction: "get_sermon",
   };
 }
 
