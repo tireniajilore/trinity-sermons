@@ -6,6 +6,7 @@ import { loadRetrievalConfig, type RetrievalConfig } from "../config.js";
 import { interpretQuery, normalizeQuery, type InterpretedIntent } from "./intent.js";
 import { InMemoryCandidateProvider, type CandidateProvider } from "./candidates.js";
 import { applyWholeSermonFilter, type MatchMode } from "./filter.js";
+import { llmRerank, LLM_RERANK_MODEL } from "./llm-rerank.js";
 import { SearchCache } from "./cache.js";
 import { InMemorySermonRepository, type SermonRepository } from "../sermons/repository.js";
 import {
@@ -122,13 +123,29 @@ export async function runSearch(
     deps.config.candidateCounts,
     deps.config.fusion
   );
-  const { kept, appliedFilters } = applyWholeSermonFilter(
+  // When the LLM judge is on, skip the dense gatekeeper in the pre-filter —
+  // the judge sees every candidate the lexical floor keeps, and decides.
+  const useLlm = deps.config.llmRerank?.enabled === true;
+  const { kept: preFiltered, appliedFilters } = applyWholeSermonFilter(
     candidates,
     intent,
     matchMode,
     deps.config.overlapFloor,
-    deps.config.denseMaxDistance ?? null
+    useLlm ? null : (deps.config.denseMaxDistance ?? null)
   );
+  let kept = preFiltered;
+  if (useLlm) {
+    const verdicts = await llmRerank(query, preFiltered);
+    if (verdicts) {
+      const before = kept.length;
+      kept = kept.filter((c) => verdicts.get(c.sermon.sermonId)?.keep === true);
+      appliedFilters.push(
+        `llm judge (${LLM_RERANK_MODEL}): ${before} -> ${kept.length}`
+      );
+    } else {
+      appliedFilters.push("llm judge unavailable: deterministic results kept");
+    }
+  }
   const limited = kept.slice(0, limit);
 
   const payload: SearchPayload = {
