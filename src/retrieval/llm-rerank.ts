@@ -10,10 +10,12 @@
 import type { Candidate } from "./candidates.js";
 
 export const LLM_RERANK_MODEL = "gpt-4o-mini";
-export const LLM_RERANK_PROMPT_VERSION = "judge-v2";
+export const LLM_RERANK_PROMPT_VERSION = "judge-v3";
 
 export interface RerankVerdict {
   sermonId: string;
+  /** 0=irrelevant, 1=passing mention, 2=clearly helpful, 3=ideal match */
+  score: number;
   keep: boolean;
   reason: string;
 }
@@ -35,22 +37,21 @@ function candidateSummary(c: Candidate): string {
 
 const SYSTEM_PROMPT = `You are judging sermon search results for relevance. A user asked a question; below are candidate sermons retrieved by keyword and vector search.
 
-For each candidate, decide: KEEP or DROP.
+For each candidate, score its relevance:
 
-KEEP if the sermon would genuinely help someone asking this question — the topic gets meaningful treatment, not just a drive-by mention. It does not need to be the sermon's single primary focus; a substantial section on the topic counts.
+- 3 = Ideal: the sermon is substantially about the user's topic; a listener asking this question would feel this is exactly what they needed.
+- 2 = Clearly helpful: the topic gets meaningful treatment (a substantial section, not just a mention), even if it's not the sermon's primary focus.
+- 1 = Passing mention: the topic comes up briefly (an illustration, an aside, one point among many). Not enough to satisfy the question on its own.
+- 0 = Irrelevant: about something else entirely, or matched on a coincidental word.
 
-DROP if:
-- The topic is only mentioned in passing (a single illustration, a brief aside, one bullet in a list of many).
-- The sermon is about something else entirely and matched on a coincidental word.
-- A listener asking this question would feel misled by the recommendation.
+Be honest about 1 vs 2: a single story illustrating the topic is a 1; a five-minute teaching block on it is a 2.
 
-Lean toward keeping when the connection is real but not central. Drop only the clear misses. If none of the candidates would genuinely help, keep none.
-
-Respond with JSON only: {"verdicts": [{"sermonId": "...", "keep": true/false, "reason": "one short sentence"}]}`;
+Respond with JSON only: {"verdicts": [{"sermonId": "...", "score": 0-3, "reason": "one short sentence"}]}`;
 
 export async function llmRerank(
   query: string,
-  candidates: Candidate[]
+  candidates: Candidate[],
+  keepThreshold: number = 2
 ): Promise<Map<string, RerankVerdict> | null> {
   const key = apiKey();
   if (!key || candidates.length === 0) return null;
@@ -90,14 +91,17 @@ export async function llmRerank(
     const content = json.choices?.[0]?.message?.content;
     if (!content) return null;
     const parsed = JSON.parse(content) as {
-      verdicts: Array<{ sermonId: string; keep: boolean; reason: string }>;
+      verdicts: Array<{ sermonId: string; score: number; reason: string }>;
     };
     const map = new Map<string, RerankVerdict>();
     for (const v of parsed.verdicts ?? []) {
-      if (typeof v.sermonId === "string" && typeof v.keep === "boolean") {
+      if (typeof v.sermonId === "string" && typeof v.score === "number") {
+        const score = Math.max(0, Math.min(3, Math.round(v.score)));
         map.set(v.sermonId, {
           sermonId: v.sermonId,
-          keep: v.keep,
+          score,
+          // Keep threshold is configurable; default keeps 2+ ("clearly helpful").
+          keep: score >= (keepThreshold ?? 2),
           reason: typeof v.reason === "string" ? v.reason : "",
         });
       }

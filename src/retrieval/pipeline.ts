@@ -135,7 +135,11 @@ export async function runSearch(
   );
   let kept = preFiltered;
   if (useLlm) {
-    const verdicts = await llmRerank(query, preFiltered);
+    const verdicts = await llmRerank(
+      query,
+      preFiltered,
+      deps.config.llmRerank.keepThreshold ?? 2
+    );
     if (verdicts) {
       const before = kept.length;
       kept = kept.filter((c) => verdicts.get(c.sermon.sermonId)?.keep === true);

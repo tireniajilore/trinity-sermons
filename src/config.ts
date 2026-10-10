@@ -11,7 +11,7 @@ export interface RetrievalConfig {
   /** Max cosine distance (0=identical, 2=opposite) for dense keep. Null disables. */
   denseMaxDistance: number | null;
   /** LLM relevance judge (gpt-4o-mini). When enabled, it has the final say. */
-  llmRerank: { enabled: boolean };
+  llmRerank: { enabled: boolean; keepThreshold?: number };
   matchModeDefault: "strict" | "broad";
   fusion: { k: number; denseWeight: number; lexicalWeight: number };
   candidateCounts: { dense: number; lexical: number; fused: number };
