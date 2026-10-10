@@ -142,9 +142,18 @@ export async function runSearch(
     );
     if (verdicts) {
       const before = kept.length;
-      kept = kept.filter((c) => verdicts.get(c.sermon.sermonId)?.keep === true);
+      kept = kept
+        .filter((c) => verdicts.get(c.sermon.sermonId)?.keep === true)
+        // Judge's relevance score outranks vector similarity: a 3 the judge
+        // loved beats a 1 it barely kept, regardless of embedding order.
+        // Fused score breaks ties within a score bucket.
+        .sort((a, b) => {
+          const sa = verdicts.get(a.sermon.sermonId)?.score ?? 0;
+          const sb = verdicts.get(b.sermon.sermonId)?.score ?? 0;
+          return sb - sa || b.fusedScore - a.fusedScore;
+        });
       appliedFilters.push(
-        `llm judge (${LLM_RERANK_MODEL}): ${before} -> ${kept.length}`
+        `llm judge (${LLM_RERANK_MODEL}): ${before} -> ${kept.length}, ordered by judge score`
       );
     } else {
       appliedFilters.push("llm judge unavailable: deterministic results kept");
