@@ -8,7 +8,7 @@
 // Cohere).
 
 import { Pool } from "pg";
-import type { SermonRepository } from "../sermons/repository.js";
+import type { SermonRepository, SeriesInfo } from "../sermons/repository.js";
 import type { Candidate, CandidateProvider } from "../retrieval/candidates.js";
 import type { InterpretedIntent } from "../retrieval/intent.js";
 import type { SermonProfile, SermonRecord } from "../sermons/types.js";
@@ -83,6 +83,83 @@ export class PostgresSermonRepository implements SermonRepository {
 
   async listAll(): Promise<SermonRecord[]> {
     const { rows } = await this.pool.query(`${PROFILE_SELECT} order by v.published_at desc`);
+    return (rows as ProfileRow[]).map(toRecord);
+  }
+
+  async listSeries(limit: number): Promise<SeriesInfo[]> {
+    const { rows } = await this.pool.query(
+      `select v.series as name,
+              count(*)::int as sermon_count,
+              min(v.published_at)::text as first_preached,
+              max(v.published_at)::text as last_preached,
+              array_agg(distinct v.preacher) filter (where v.preacher is not null) as preachers
+       from videos v
+       join sermon_profiles p on p.video_id = v.id
+       where v.is_searchable and v.suppressed_at is null and v.series is not null
+       group by v.series
+       order by max(v.published_at) desc
+       limit $1`,
+      [limit]
+    );
+    return (rows as Array<{ name: string; sermon_count: number; first_preached: string; last_preached: string; preachers: string[] }>).map((r) => ({
+      name: r.name,
+      sermonCount: r.sermon_count,
+      firstPreached: r.first_preached,
+      lastPreached: r.last_preached,
+      preachers: r.preachers ?? [],
+    }));
+  }
+
+  async listSeriesSermons(series: string, limit: number): Promise<SermonRecord[]> {
+    // Exact (case-insensitive) first.
+    let { rows } = await this.pool.query(
+      `${PROFILE_SELECT} and v.series ilike $1 order by v.published_at asc limit $2`,
+      [series, limit]
+    );
+    if (rows.length === 0) {
+      // Substring fallback: find the best-matching series name, then list it.
+      const { rows: nameRows } = await this.pool.query(
+        `select v.series as name
+         from videos v
+         where v.is_searchable and v.suppressed_at is null and v.series is not null
+           and v.series ilike '%' || $1 || '%'
+         group by v.series
+         order by count(*) desc
+         limit 1`,
+        [series]
+      );
+      if (nameRows.length > 0) {
+        const best = nameRows[0].name as string;
+        ({ rows } = await this.pool.query(
+          `${PROFILE_SELECT} and v.series = $1 order by v.published_at asc limit $2`,
+          [best, limit]
+        ));
+      }
+    }
+    return (rows as ProfileRow[]).map(toRecord);
+  }
+
+  async suggestSeries(series: string, limit: number): Promise<string[]> {
+    // No pg_trgm: suggest most recent series names as a fallback.
+    const { rows } = await this.pool.query(
+      `select v.series as name
+       from videos v
+       where v.is_searchable and v.suppressed_at is null and v.series is not null
+       group by v.series
+       order by max(v.published_at) desc
+       limit $1`,
+      [limit]
+    );
+    return (rows as Array<{ name: string }>).map((r) => r.name);
+  }
+
+  async findSimilar(sermonId: string, limit: number): Promise<SermonRecord[]> {
+    const { rows } = await this.pool.query(
+      `${PROFILE_SELECT} and v.id != $1
+       order by p.embedding <=> (select p2.embedding from sermon_profiles p2 where p2.video_id = $1)
+       limit $2`,
+      [sermonId, limit]
+    );
     return (rows as ProfileRow[]).map(toRecord);
   }
 }

@@ -4,11 +4,27 @@
 
 import type { SermonRecord } from "./types.js";
 
+export interface SeriesInfo {
+  name: string;
+  sermonCount: number;
+  firstPreached: string;
+  lastPreached: string;
+  preachers: string[];
+}
+
 export interface SermonRepository {
   getById(sermonId: string): Promise<SermonRecord | null>;
   listRecent(limit: number): Promise<SermonRecord[]>;
   /** All searchable sermons, for candidate retrieval. */
   listAll(): Promise<SermonRecord[]>;
+  /** All series, most recently preached first. */
+  listSeries(limit: number): Promise<SeriesInfo[]>;
+  /** Sermons in a series (case-insensitive), chronological. Empty if no match. */
+  listSeriesSermons(series: string, limit: number): Promise<SermonRecord[]>;
+  /** Closest series names for suggestions when listSeriesSermons finds nothing. */
+  suggestSeries(series: string, limit: number): Promise<string[]>;
+  /** Sermons most similar by embedding, excluding the source. Empty if unknown id. */
+  findSimilar(sermonId: string, limit: number): Promise<SermonRecord[]>;
 }
 
 function retrievalText(
@@ -147,5 +163,77 @@ export class InMemorySermonRepository implements SermonRepository {
 
   async listAll(): Promise<SermonRecord[]> {
     return [...this.byId.values()];
+  }
+
+  async listSeries(limit: number): Promise<SeriesInfo[]> {
+    const bySeries = new Map<string, SermonRecord[]>();
+    for (const s of this.byId.values()) {
+      if (!s.series) continue;
+      const arr = bySeries.get(s.series) ?? [];
+      arr.push(s);
+      bySeries.set(s.series, arr);
+    }
+    return [...bySeries.entries()]
+      .map(([name, sermons]) => {
+        const dates = sermons.map((s) => s.publishedAt).sort();
+        const preachers = [...new Set(sermons.map((s) => s.preacher).filter(Boolean))] as string[];
+        return {
+          name,
+          sermonCount: sermons.length,
+          firstPreached: dates[0],
+          lastPreached: dates[dates.length - 1],
+          preachers,
+        };
+      })
+      .sort((a, b) => (a.lastPreached < b.lastPreached ? 1 : -1))
+      .slice(0, limit);
+  }
+
+  async listSeriesSermons(series: string, limit: number): Promise<SermonRecord[]> {
+    const norm = series.toLowerCase();
+    // Exact (case-insensitive) first, then substring fallback.
+    let match = [...this.byId.values()].filter(
+      (s) => s.series?.toLowerCase() === norm
+    );
+    if (match.length === 0) {
+      const sub = [...this.byId.values()].filter((s) =>
+        s.series?.toLowerCase().includes(norm)
+      );
+      const firstSeries = sub[0]?.series?.toLowerCase();
+      if (firstSeries) {
+        match = sub.filter((s) => s.series?.toLowerCase() === firstSeries);
+      }
+    }
+    return match
+      .sort((a, b) => (a.publishedAt < b.publishedAt ? -1 : 1))
+      .slice(0, limit);
+  }
+
+  async suggestSeries(series: string, limit: number): Promise<string[]> {
+    const names = [...new Set(
+      [...this.byId.values()].map((s) => s.series).filter(Boolean)
+    )] as string[];
+    const norm = series.toLowerCase();
+    return names
+      .map((n) => ({ n, score: n.toLowerCase().includes(norm) || norm.includes(n.toLowerCase()) ? 1 : 0 }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit)
+      .map((x) => x.n);
+  }
+
+  async findSimilar(sermonId: string, limit: number): Promise<SermonRecord[]> {
+    const source = this.byId.get(sermonId);
+    if (!source) return [];
+    // In-memory: rank by shared primary topics (embedding stand-in).
+    const sourceTopics = new Set(source.profile.primaryTopics.map((t) => t.toLowerCase()));
+    return [...this.byId.values()]
+      .filter((s) => s.sermonId !== sermonId)
+      .map((s) => ({
+        s,
+        score: s.profile.primaryTopics.filter((t) => sourceTopics.has(t.toLowerCase())).length,
+      }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit)
+      .map((x) => x.s);
   }
 }

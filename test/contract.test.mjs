@@ -73,10 +73,10 @@ test("initialize reports server identity", async () => {
   assert.equal(resp.result.serverInfo.version, "1.0.0");
 });
 
-test("tools/list exposes exactly the three documented tools", async () => {
+test("tools/list exposes exactly the six documented tools", async () => {
   const resp = await rpc("tools/list", {});
   const names = resp.result.tools.map((t) => t.name).sort();
-  assert.deepEqual(names, ["get_sermon", "list_recent_sermons", "search_sermons"]);
+  assert.deepEqual(names, ["find_similar_sermons", "get_sermon", "list_recent_sermons", "list_series", "list_series_sermons", "search_sermons"]);
   for (const t of resp.result.tools) {
     assert.equal(t.annotations.readOnlyHint, true, `${t.name} readOnlyHint`);
     assert.equal(t.annotations.destructiveHint, false, `${t.name} destructiveHint`);
@@ -187,4 +187,47 @@ test("concurrent requests with repeated JSON-RPC ids never cross responses", asy
       assert.equal(r.structuredContent.sermon.sermonId, want, `response ${i} crossed`);
     }
   });
+});
+
+test("list_series: returns series most recent first", async () => {
+  const result = await callTool("list_series", {});
+  const series = result.structuredContent.series;
+  assert.ok(series.length >= 2, "expected at least Foundations and Treasure");
+  const names = series.map((s) => s.name);
+  assert.ok(names.includes("Foundations"));
+  assert.ok(names.includes("Treasure"));
+  // Most recent first: Treasure (2023-11-05) vs Foundations (2024-02-11)
+  assert.equal(names[0], "Foundations");
+  for (const s of series) {
+    assert.ok(s.sermonCount >= 1);
+    assert.ok(s.firstPreached <= s.lastPreached);
+  }
+});
+
+test("list_series_sermons: chronological order, honest empty", async () => {
+  const result = await callTool("list_series_sermons", { series: "Foundations" });
+  assert.equal(result.structuredContent.series, "Foundations");
+  assert.ok(result.structuredContent.sermons.length >= 1);
+  const dates = result.structuredContent.sermons.map((s) => s.publishedAt);
+  assert.deepEqual(dates, [...dates].sort());
+
+  // Case-insensitive
+  const lower = await callTool("list_series_sermons", { series: "foundations" });
+  assert.equal(lower.structuredContent.series, "Foundations");
+
+  // Unknown -> empty + suggestions
+  const missing = await callTool("list_series_sermons", { series: "Nonexistent Series XYZ" });
+  assert.equal(missing.structuredContent.sermons.length, 0);
+  assert.ok(missing.structuredContent.suggestedSeries.length > 0);
+});
+
+test("find_similar_sermons: excludes self, unknown id -> empty", async () => {
+  const result = await callTool("find_similar_sermons", { sermonId: "s-marriage-001" });
+  assert.equal(result.structuredContent.sourceSermon.sermonId, "s-marriage-001");
+  for (const s of result.structuredContent.sermons) {
+    assert.notEqual(s.sermonId, "s-marriage-001", "self must be excluded");
+  }
+  const missing = await callTool("find_similar_sermons", { sermonId: "nope" });
+  assert.equal(missing.structuredContent.sermons.length, 0);
+  assert.equal(missing.structuredContent.sourceSermon, null);
 });
