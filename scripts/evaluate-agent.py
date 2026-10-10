@@ -75,7 +75,7 @@ Tools:
 To call a tool, respond with ONLY: {"tool": "<name>", "args": {...}}
 To answer the user, respond with ONLY: {"answer": "<your answer>"}
 
-WORKFLOW: For content questions, call answer_sermon_question FIRST — it handles search, retrieval, and verification server-side. Use the findings directly. Only fall back to manual search_sermons → get_sermon if you need discovery/browsing.
+WORKFLOW: Search (discover) -> get_sermon (verify evidence, get evidenceToken) -> cite_sermons (generate canonical citations) -> Answer (use only server-generated citations or acknowledge uncertainty).
 """
 
 def run_agent(question, max_steps=8):
@@ -158,7 +158,7 @@ def metric_verification_compliance(q, agent_result):
                            bool(re.search(r'"[^"]+"', answer))
     if not makes_specific_claim:
         return None
-    evidence_tools = {"get_sermon", "verify_quote", "verify_sermon_references", "cite_sermons", "answer_sermon_question"}
+    evidence_tools = {"get_sermon", "verify_quote", "verify_sermon_references", "cite_sermons"}
     return bool(evidence_tools & tools_used)
 
 # ── Metric 5: Abstention accuracy ──
@@ -186,7 +186,7 @@ def metric_unsupported_attribution(q, agent_result):
     """
     answer = agent_result["answer"]
     tools_used = {c["tool"] for c in agent_result["tool_calls"]}
-    evidence_tools = {"get_sermon", "verify_quote", "verify_sermon_references", "cite_sermons", "answer_sermon_question"}
+    evidence_tools = {"get_sermon", "verify_quote", "verify_sermon_references", "cite_sermons"}
     has_evidence = bool(evidence_tools & tools_used)
 
     # Specific claims: names a preacher, gives a date, quotes, or cites a URL
