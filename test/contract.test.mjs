@@ -63,6 +63,23 @@ test("healthz reports process health", async () => {
   assert.deepEqual(await r.json(), { ok: true });
 });
 
+test("root serves first-party search with safe text rendering", async () => {
+  const r = await fetch(BASE);
+  const html = await r.text();
+  assert.equal(r.status, 200);
+  assert.ok(html.includes('/api/agent'));
+  assert.ok(html.includes('textContent'));
+  assert.ok(!html.includes('innerHTML'));
+});
+
+test("agent endpoint refuses to present fixtures as real sermons", async () => {
+  if (process.env.DATABASE_URL && process.env.OPENAI_API_KEY) return;
+  const r = await fetch(`${BASE}/api/agent`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ question: 'grief' }) });
+  assert.equal(r.status, 503);
+  assert.equal(r.headers.get('cache-control'), 'no-store');
+  assert.ok(!(await r.text()).includes('s-grief-001'));
+});
+
 test("initialize reports server identity", async () => {
   const resp = await rpc("initialize", {
     protocolVersion: "2025-06-18",

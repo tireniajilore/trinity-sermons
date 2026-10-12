@@ -1,4 +1,26 @@
-# Trinity Sermons MCP
+# Trinity Sermons
+
+## Owned sermon agent
+
+The first-party interface at `/` now searches and displays reviewed transcript
+excerpts. `POST /api/agent` accepts `{ "question": "Find sermons about grief" }`.
+The model selects sources; application code publishes canonical metadata and exact
+transcript slices. It cannot publish free-form advice or generated prayers.
+
+Requires `DATABASE_URL` and `OPENAI_API_KEY`; optional `AGENT_MODEL` defaults to
+`gpt-4o-mini`. Missing configuration returns 503, never demonstration sermons.
+The `/mcp` route remains available for existing clients.
+
+- [Design, invariants, limitations and release plan](docs/owned-agent-design.md)
+- `npm run evaluate:agent` — offline enforcement tests
+- `AGENT_EVAL_URL=http://127.0.0.1:3000 npm run evaluate:agent:live` — live traces
+  for human relevance, attribution and boundary review; not a semantic score
+
+V1 supports discovery and quote checking. Catalog summaries, conversation memory,
+and generated teaching synthesis are deferred. Model review can still misjudge
+relevance or context; transcript fidelity is not proof of theological correctness.
+
+## Legacy MCP interface
 
 A public, read-only MCP server that finds **complete Trinity New York sermons**
 (@TrinityNewYork, Harlem) matching a topic or life situation — then returns a
