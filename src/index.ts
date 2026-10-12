@@ -11,6 +11,10 @@ import { createMcpServer } from "./mcp/server.js";
 import { defaultPipelineDeps } from "./retrieval/pipeline.js";
 import { createDbPool } from "./providers/postgres.js";
 import { migrate } from "./db/migrate.js";
+import { AGENT_HTML } from "./agent/page.js";
+import { AgentRequest, runAgent } from "./agent/harness.js";
+import { OpenAIAgentModel } from "./agent/model.js";
+import { PostgresTranscriptStore } from "./agent/evidence.js";
 import {
   authorized,
   getFetchStatus,
@@ -31,6 +35,9 @@ const MAX_ADMIN_BODY_BYTES = 25_000_000;
 // The MCP *server* is still created fresh per request inside the factory.
 const deps = defaultPipelineDeps();
 const bootPool = createDbPool();
+const agentModel = process.env.OPENAI_API_KEY
+  ? new OpenAIAgentModel(process.env.OPENAI_API_KEY, process.env.AGENT_MODEL || "gpt-4o-mini") : null;
+let activeAgentRequests = 0;
 if (bootPool) {
   try {
     await migrate(bootPool);
@@ -125,21 +132,6 @@ async function handleMcp(req: IncomingMessage, res: ServerResponse): Promise<voi
   }
 }
 
-const LANDING_HTML = `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Trinity Sermons — find the Trinity New York message for your situation (MCP)</title>
-<meta name="description" content="A free public MCP server that finds complete Trinity New York sermons matching a topic or life situation, with YouTube links.">
-</head>
-<body style="font-family: system-ui, sans-serif; max-width: 640px; margin: 3rem auto; padding: 0 1.5rem; line-height: 1.6;">
-<h1>Trinity Sermons</h1>
-<p>A free public MCP server: ask which complete Trinity New York sermon fits a topic or life situation, and get whole-message matches with YouTube links.</p>
-<p>MCP endpoint (Streamable HTTP): <code>POST /mcp</code><br>Health: <code>GET /healthz</code></p>
-<p>Tools: <code>search_sermons</code>, <code>get_sermon</code>, <code>list_recent_sermons</code>. Read-only, no sign-up.</p>
-</body>
-</html>`;
 
 function cors(res: ServerResponse): void {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -150,6 +142,38 @@ function cors(res: ServerResponse): void {
 function notFound(res: ServerResponse): void {
   res.writeHead(404, { "Content-Type": "application/json" });
   res.end(JSON.stringify({ error: "not found" }));
+}
+
+async function handleAgent(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  res.setHeader("Cache-Control", "no-store");
+  // Never expose the in-memory fixture corpus as real sermons in the application.
+  if (!agentModel || !bootPool) {
+    res.writeHead(503, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "Sermon search is not configured yet." }));
+    return;
+  }
+  if (activeAgentRequests >= 4) {
+    res.writeHead(429, { "Content-Type": "application/json", "Retry-After": "10" });
+    res.end(JSON.stringify({ error: "Search is busy. Please try again shortly." }));
+    return;
+  }
+  activeAgentRequests++;
+  try {
+    const parsed = AgentRequest.safeParse(JSON.parse((await readBodyBuffer(req, 10000)).toString("utf8")));
+    if (!parsed.success) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Provide a question between 3 and 2000 characters." }));
+      return;
+    }
+    const result = await runAgent({ pipeline: deps, model: agentModel, transcripts: new PostgresTranscriptStore(bootPool) }, parsed.data);
+    res.writeHead(result.status === "unavailable" ? 503 : 200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify(result));
+  } catch {
+    if (!res.headersSent) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Invalid request." }));
+    }
+  } finally { activeAgentRequests--; }
 }
 
 async function handleAdminIngest(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -265,7 +289,11 @@ const httpServer = createServer((req, res) => {
   }
   if (url.pathname === "/" && req.method === "GET") {
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-    res.end(LANDING_HTML);
+    res.end(AGENT_HTML);
+    return;
+  }
+  if (url.pathname === "/api/agent" && req.method === "POST") {
+    void handleAgent(req, res);
     return;
   }
   if (url.pathname === "/mcp" && (req.method === "POST" || req.method === "GET")) {
